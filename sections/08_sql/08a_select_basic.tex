@@ -1,0 +1,191 @@
+\subsection{Data Manipulation Language}
+\begin{frame}[fragile]{SELECT -- The Foundation}
+  The \texttt{SELECT} statement retrieves data from one or more tables.
+  It is the most frequently used SQL statement.
+
+  \begin{block}{Full Syntax (clauses in writing order)}
+\begin{lstlisting}[style=sqlstyle]
+SELECT column_name(s)
+FROM table_name
+WHERE condition
+GROUP BY column_name(s)
+HAVING condition
+ORDER BY column_name(s)
+LIMIT number
+\end{lstlisting}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{SELECT} and \texttt{FROM} are the only \textbf{mandatory}
+          clauses; all others are optional.
+    \item \texttt{GROUP BY} is used together with aggregate functions;
+          \texttt{HAVING} filters \emph{groups} (like \texttt{WHERE} but
+          for groups, not individual rows).
+  \end{itemize}
+
+  \begin{alertblock}{Execution Order (not writing order!)}
+    \texttt{FROM} $\to$ \texttt{WHERE} $\to$ \texttt{GROUP BY} $\to$
+    \texttt{HAVING} $\to$ \texttt{SELECT} $\to$ \texttt{ORDER BY} $\to$
+    \texttt{LIMIT}\\[2pt]
+    Understanding this order is essential: it explains, for example, why
+    column aliases defined in \texttt{SELECT} cannot be referenced in
+    \texttt{WHERE}.
+  \end{alertblock}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{SELECT -- Basic Usage}
+  \begin{block}{Examples}
+\begin{lstlisting}[style=sqlstyle]
+-- Select all columns from a table
+SELECT * FROM brand;
+
+-- Select specific columns
+SELECT name, address FROM brand;
+
+-- Qualify column names (needed with multiple tables)
+SELECT brand.name, brand.city FROM brand;
+\end{lstlisting}
+  \end{block}
+
+  \begin{itemize}
+    \item Using \texttt{*} returns \textbf{all columns} -- convenient for
+          exploration but avoid in production code: column order can change
+          when the table is altered, and transferring unneeded columns wastes
+          network bandwidth and memory.
+    \item Qualifying with \texttt{table.column} notation prevents
+          \textbf{ambiguity} when joining multiple tables that share column
+          names (e.g.\ both have an \texttt{id} column).
+  \end{itemize}
+
+  \begin{examples}{Tip: Explore first, then be specific}
+    When learning a new schema, start with \texttt{SELECT * FROM table LIMIT
+    10} to understand its structure, then narrow your query to only the
+    columns you actually need.
+  \end{examples}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{SELECT DISTINCT}
+  \begin{block}{Returning Only Unique Values}
+\begin{lstlisting}[style=sqlstyle]
+-- Return only unique values
+SELECT DISTINCT country FROM brand;
+
+-- Multiple columns: the combination must be unique
+SELECT DISTINCT country, legal_form FROM brand;
+\end{lstlisting}
+  \end{block}
+
+  \begin{itemize}
+    \item Without \texttt{DISTINCT}, SQL returns \textbf{all rows including
+          duplicates}.  This differs from pure relational algebra, which
+          always produces sets (no duplicates).
+    \item \texttt{DISTINCT} applies to the \textbf{entire row}, not just one
+          column: in the second example, the pair
+          \texttt{(country, legal\_form)} must be unique.
+  \end{itemize}
+
+  \begin{alertblock}{Performance Warning}
+    \texttt{DISTINCT} forces the database to sort or hash the entire result
+    set to eliminate duplicates.  On large tables this can be very expensive.
+    Avoid it if your query is already guaranteed to return unique rows, or if
+    you simply want to count (use \texttt{COUNT(DISTINCT column)} instead).
+  \end{alertblock}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{SELECT with LIMIT / TOP}
+  \begin{block}{Restricting the Number of Returned Rows}
+\begin{lstlisting}[style=sqlstyle]
+-- MySQL / MariaDB / PostgreSQL:
+SELECT * FROM product LIMIT 10;
+
+-- Skip first 20 rows, then return the next 10
+SELECT * FROM product LIMIT 10 OFFSET 20;
+
+-- SQL Server syntax:
+SELECT TOP 10 * FROM product;
+\end{lstlisting}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{LIMIT} is essential when exploring large tables -- without
+          it a query on a table with millions of rows could transfer
+          gigabytes of data.
+    \item \texttt{OFFSET} enables \textbf{pagination}: to show page~3 with
+          10 rows per page, use \texttt{LIMIT 10 OFFSET 20}.
+  \end{itemize}
+
+  \begin{alertblock}{Always combine LIMIT with ORDER BY}
+    Without an explicit \texttt{ORDER BY} the row order is
+    \textbf{undefined} -- the database may return a different set of rows
+    each time.  \texttt{LIMIT} without \texttt{ORDER BY} is only useful for
+    a quick look at the data, never for reproducible results.
+  \end{alertblock}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{Aliases (AS)}
+  \begin{block}{Renaming Columns, Tables, and Expressions}
+\begin{lstlisting}[style=sqlstyle]
+-- Column alias
+SELECT best_before_date AS bbd FROM stock;
+
+-- Table alias (useful in JOINs)
+SELECT p.name, p.price FROM product AS p;
+
+-- Expression alias
+SELECT AVG(price) AS avg_price FROM product;
+\end{lstlisting}
+  \end{block}
+
+  \begin{itemize}
+    \item Aliases are \textbf{temporary}: they exist only for the duration
+          of the query and do not change the underlying table.
+    \item Table aliases reduce typing and dramatically improve readability
+          in complex queries with multiple joins.
+    \item Column aliases can be used in \texttt{ORDER BY} (MySQL allows this
+          as an extension) but \textbf{not} in \texttt{WHERE} or
+          \texttt{HAVING} -- because those clauses are evaluated before
+          \texttt{SELECT} assigns the alias.
+  \end{itemize}
+
+  \begin{examples}{Shorthand: AS is optional}
+    Most DBMSs allow omitting the keyword \texttt{AS}:
+    \texttt{SELECT price p FROM product} is equivalent to
+    \texttt{SELECT price AS p FROM product}.
+    Using \texttt{AS} explicitly is recommended for clarity.
+  \end{examples}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{Aggregate Functions}
+  Aggregate functions perform a calculation on a \textbf{set of rows} and
+  return a \textbf{single value}.  They are the building block of
+  statistical queries.
+
+  \begin{block}{Common Aggregate Functions}
+\begin{lstlisting}[style=sqlstyle]
+SELECT COUNT(*) FROM product;         -- count all rows
+SELECT COUNT(price) FROM product;     -- count non-NULL values
+SELECT MIN(price) FROM product;
+SELECT MAX(price) FROM product;
+SELECT SUM(price) FROM product;
+SELECT AVG(price) AS average_price FROM product;
+\end{lstlisting}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{COUNT(*)} counts \textbf{all rows} (including those with
+          \texttt{NULL}); \texttt{COUNT(column)} counts only rows where
+          the column is \textbf{not} \texttt{NULL}.
+    \item Aggregate functions are most powerful when combined with
+          \texttt{GROUP BY} to compute per-group statistics.
+  \end{itemize}
+
+  \begin{alertblock}{Cannot Use Aggregates in WHERE}
+    Aggregate functions are computed \emph{after} \texttt{WHERE} filtering.
+    Use \texttt{HAVING} to filter on aggregate results.
+  \end{alertblock}
+\end{frame}

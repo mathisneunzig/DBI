@@ -1,0 +1,651 @@
+\section{History of Data Models}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Data Models \& Database Types -- Overview}
+  \begin{block}{Central Questions}
+    \begin{itemize}
+      \item What data models exist, and why were they invented?
+      \item What are the conceptual differences between them?
+      \item When should you choose one over another?
+    \end{itemize}
+  \end{block}
+
+  Data models did not appear all at once -- they \emph{evolved} in direct response to
+  real-world problems: growing data volumes, the need for concurrent access,
+  increasingly complex relationships between entities, and the demand for faster,
+  more expressive queries.
+
+  \medskip
+  Each model represents a different trade-off between \textbf{simplicity},
+  \textbf{flexibility}, and \textbf{scalability}.  Understanding those trade-offs
+  is the key skill for any database designer or software engineer:
+  the ``best'' model depends entirely on your use case, your data's structure,
+  and your query patterns.
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Paper-Based Data Model}
+  \begin{block}{Historical Examples}
+    \begin{itemize}
+      \item \textbf{Census books} (\textasciitilde{}18th century) -- hand-written population records
+      \item \textbf{Marriage registers} (\textasciitilde{}19th century) -- church and civil records of life events
+      \item \textbf{Card catalogues} (19th--20th century) -- library index cards, one card per book
+    \end{itemize}
+  \end{block}
+
+  Paper-based record-keeping served humanity for centuries, but it has severe
+  structural limitations.  Finding information required physically searching
+  through stacks of books or boxes of cards -- there was no concept of a
+  ``query'', no possibility of concurrent access, and no means of automation.
+
+  \begin{alertblock}{Breaking Point: 1890 US Census}
+    The 1890 census had to count \textbf{62,947,714} people.  Storing and
+    tallying that data manually was no longer feasible -- results from the
+    previous census were not fully compiled before the next census began.
+    This crisis forced the invention of mechanical data storage and processing.
+  \end{alertblock}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Herman Hollerith (!)}
+  \begin{block}{Mechanical Punch Card Tabulation -- 1890}
+    \begin{itemize}
+      \item Herman Hollerith invented the \textbf{punch card reader} and
+            \textbf{tabulating machine} specifically for the 1890 US census.
+      \item Process: an operator feeds punch cards through the reader
+            $\rightarrow$ the machine counts holes mechanically
+            $\rightarrow$ produces numerical totals.
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{}
+    Example query: \emph{``How many people in Baltimore are over 50 years old?''}\\
+    With Hollerith's machine this could be answered \textbf{mechanically in hours}
+    instead of years of manual counting.
+  \end{examples}
+
+  Hollerith's invention was transformative not only for data processing but also
+  for the computing industry itself.  The company he founded to commercialise
+  his tabulating machines eventually merged with others to become the
+  \textbf{Computing-Tabulating-Recording Company}, which was renamed
+  \textbf{IBM} in 1924.  Punch cards remained a primary data-entry medium
+  all the way into the 1970s.
+
+  \smallskip
+  \textit{(!) This topic is not part of the exam, but its historical significance
+  justifies a brief discussion.}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{File-Based Data Model}
+  \begin{block}{Timeline: 1950s -- 1960s}
+    \begin{itemize}
+      \item First \textbf{electronic files} stored on magnetic tape and, later, disk
+      \item Data is structured by the \emph{application}: a file on a filesystem
+            with a format the program understands (fixed-width columns, delimiters, etc.)
+      \item Still in everyday use for simple cases: CSV exports, JSON/XML configuration,
+            log files
+    \end{itemize}
+  \end{block}
+
+  The file-based model was a massive leap over paper -- data could now be read,
+  written, and processed at electronic speed.  However, every application had
+  to implement its own logic for reading and interpreting files.  There was no
+  shared schema, no query language, and no access control built in.
+
+  \begin{alertblock}{Key Limitations}
+    \begin{itemize}
+      \item No concurrent access management -- two programs writing simultaneously
+            corrupt the file.
+      \item No unified query language -- every developer invents their own search.
+      \item Application-specific interpretation -- changing the format breaks
+            every program that reads the file.
+      \item Data duplication is common because there is no concept of a
+            shared, centrally managed data store.
+    \end{itemize}
+  \end{alertblock}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Hierarchical Data Model}
+  \begin{block}{Timeline: 1960s -- Developed at IBM}
+    \begin{itemize}
+      \item Data is arranged in a \textbf{tree structure}: one root node,
+            parent nodes, and leaf nodes.
+      \item Each record node has $n$ fields; each field has exactly \textbf{1 value}.
+      \item Each child has \textbf{exactly 1 parent}; a parent can have $n$ children.
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{}
+    \texttt{Supermarket} $\rightarrow$ \texttt{Food}, \texttt{Non-Food}\\
+    \texttt{Food} $\rightarrow$ \texttt{Cheese}, \texttt{Bread}\\
+    \texttt{Cheese} $\rightarrow$ \texttt{Price}, \texttt{Weight}, \ldots
+  \end{examples}
+
+  The hierarchical model introduced the concept of \emph{structural relationships}
+  between data records.  Navigating from parent to child is very efficient because
+  the physical pointers are stored alongside the data.  This made it well-suited
+  for \emph{predefined, fixed} traversal paths.
+
+  \begin{alertblock}{Limitation}
+    The strict one-parent rule means \textbf{many-to-many relationships cannot be
+    represented} naturally.  If a product belongs to two categories, you must
+    either duplicate the product record or resort to workarounds -- both
+    solutions introduce inconsistency.  The rigidity of the tree structure
+    also makes schema evolution painful.
+  \end{alertblock}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{IBM Information Management System (IMS) (!)}
+  \begin{block}{Timeline: 1966 by IBM}
+    \begin{itemize}
+      \item Originally developed to manage the \textbf{Bill of Materials (BOM)}
+            for the Apollo moon program -- tracking hundreds of thousands of
+            spacecraft components and their sub-components.
+      \item Based on the \textbf{hierarchical data model}; processes one dataset
+            at a time (no set-based operations).
+      \item Programming interfaces: Assembly, C, C++, COBOL, FORTRAN.
+    \end{itemize}
+  \end{block}
+
+  IMS is one of the oldest database management systems in continuous active use
+  -- it has been maintained and extended by IBM for over 50 years.
+  Large financial institutions (banks, insurance companies) rely on IMS today
+  because their core transaction processing was built on it decades ago and
+  the cost of migration exceeds the cost of continued operation.
+  This is a powerful real-world lesson: choosing a data model has
+  \emph{long-term consequences}.
+
+  \smallskip
+  \textit{(!) This topic is not part of the exam.}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Network-Like Data Model}
+  \begin{block}{Timeline: 1960s -- Charles Bachman at General Electric}
+    \begin{itemize}
+      \item Data is represented as a \textbf{graph}: \emph{nodes} (records)
+            connected by \emph{arcs} (relationships).
+      \item Unlike the hierarchical model: a child node can have
+            \textbf{multiple parents}.
+      \item \textbf{Cycles} in the graph are allowed.
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{}
+    \texttt{Supermarket} $\leftrightarrow$ \texttt{Food} $\leftrightarrow$
+    \texttt{Orders} $\leftrightarrow$ \texttt{Cheese} / \texttt{Bread}\\[2pt]
+    A single \texttt{Cheese} node can be linked to both \texttt{Food} and
+    \texttt{Gourmet} categories simultaneously.
+  \end{examples}
+
+  The network model was a direct solution to the hierarchical model's
+  many-to-many limitation.  By allowing a node to have multiple parents,
+  it can faithfully represent real-world entities -- for example, a product
+  that belongs to several categories, or an employee who reports to
+  multiple managers.  The price for this expressiveness is \textbf{navigational
+  complexity}: programmers had to write explicit code to traverse pointers,
+  which made queries tightly coupled to the physical data structure.
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Integrated Data Store (IDS) (!)}
+  \begin{block}{Timeline: 1964 by General Electric -- Charles Bachman}
+    \begin{itemize}
+      \item One of the \textbf{first true Database Management Systems (DBMS)}
+            in history.
+      \item Implemented the network-like data model with physical pointer-based
+            navigation between records.
+      \item Became the basis for the \textbf{CODASYL} (Conference on Data
+            Systems Languages) \textbf{Data Base Task Group} standard -- the
+            first attempt to standardise a DBMS interface across vendors.
+    \end{itemize}
+  \end{block}
+
+  IDS demonstrated that a general-purpose data management layer could exist
+  independently of any single application -- a fundamental idea that all
+  subsequent database systems inherited.  Charles Bachman received the
+  \textbf{Turing Award} in 1973 for his work on IDS and database navigation,
+  making him the first database researcher to be so recognised.
+
+  \medskip
+  The CODASYL standard eventually influenced the design of COBOL's data
+  management facilities, which is why so much legacy financial software
+  still bears traces of the network model's thinking.
+
+  \smallskip
+  \textit{(!) This topic is not part of the exam.}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Relational Data Model}
+  \begin{block}{Timeline: 1969 by Edgar F.\ Codd (IBM)}
+    \begin{itemize}
+      \item Data stored as \textbf{tuples} (rows); tuples grouped into
+            \textbf{relations} (tables).
+      \item \textbf{Keys} uniquely identify tuples within a relation.
+      \item \textbf{Closure property}: the result of any operation on relations
+            is itself a relation -- queries can be composed freely.
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{}
+    \texttt{Person(\underline{PersonID}, FirstName, LastName, Address)}\\
+    \texttt{Order(\underline{OrderID}, Date, PersonID\textsuperscript{FK})}
+  \end{examples}
+
+  Codd's insight was to \emph{separate the logical view of data from its
+  physical storage}.  Applications should describe \emph{what} data they need,
+  not \emph{how} to navigate to it.  A high-level, set-based query language
+  (eventually SQL) would handle the navigation automatically.
+  This \textbf{data independence} made it possible to change storage structures
+  without rewriting application code -- a revolutionary idea at the time.
+
+  The relational model became the dominant paradigm through the 1980s and
+  remains the most widely used database model today.
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{The Rise of RDBMS in the 1980s}
+  \begin{block}{Competing Implementations}
+    \begin{itemize}
+      \item \textbf{UC Berkeley}: Ingres project $\rightarrow$ eventually became
+            \textbf{PostgreSQL} (still one of the most popular open-source RDBMSs)
+      \item \textbf{Uppsala University}: research system influencing European DBMS development
+      \item \textbf{IBM UK \& IBM San José}: System R project
+            $\rightarrow$ gave birth to the \textbf{SEQUEL} query language,
+            later renamed \textbf{SQL}
+    \end{itemize}
+  \end{block}
+
+  Throughout the late 1970s and 1980s, academic labs and IBM research centres
+  raced to build working relational systems.  IBM had the research lead but was
+  slow to productise -- partly because they feared cannibalising IMS sales.
+  \textbf{Oracle} (then called Relational Software, Inc.) recognised the
+  commercial opportunity, shipped the first commercial SQL RDBMS in
+  \textbf{1979}, and never looked back.
+
+  \begin{alertblock}{Key Lesson}
+    Being technically first does not always mean winning the market.  Oracle's
+    aggressive go-to-market strategy beat IBM's superior research effort --
+    a pattern that repeats throughout technology history.
+  \end{alertblock}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{MySQL}
+  \begin{block}{Timeline: 1995 by MySQL AB (now Oracle)}
+    \begin{itemize}
+      \item Open-source, cross-platform, SQL-based relational database.
+      \item \textbf{Fun fact}: ``My'' is the name of co-founder
+            Michael Widenius's daughter.
+      \item Famous for powering the \textbf{LAMP / WAMP stack}:\\
+            Linux (or Windows) + Apache + MySQL + PHP.
+    \end{itemize}
+  \end{block}
+
+  MySQL's release in 1995 democratised relational databases.  Before MySQL,
+  a production-quality SQL database required an expensive commercial licence
+  (Oracle, Sybase, Informix).  MySQL was free, fast enough for web workloads,
+  and trivial to install -- making it the default choice for the first
+  generation of web developers and powering much of the early internet.
+
+  \medskip
+  Oracle acquired Sun Microsystems (which had acquired MySQL AB) in 2010.
+  Concern about Oracle's stewardship led the original MySQL developers to fork
+  the codebase and create \textbf{MariaDB} -- the community-maintained drop-in
+  replacement that is now the default in many Linux distributions.
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{XAMPP}
+  \begin{block}{Timeline: 2002 by Apache Friends}
+    \begin{itemize}
+      \item \textbf{X} = Cross-platform (Windows, macOS, Linux)
+      \item \textbf{A} = Apache HTTP Server
+      \item \textbf{M} = MariaDB (formerly MySQL)
+      \item \textbf{P} = PHP
+      \item \textbf{P} = Perl
+    \end{itemize}
+  \end{block}
+
+  XAMPP bundles a complete local web-and-database server stack into a single
+  installer.  For learning purposes it is ideal: one download gives you a
+  running web server, a relational database, and a scripting runtime without
+  any manual configuration.  It ships with \textbf{phpMyAdmin}, a browser-based
+  graphical administration tool for MariaDB/MySQL.
+
+  \begin{examples}{}
+    In this course we use XAMPP to host a local MariaDB instance.
+    You can reach phpMyAdmin at \texttt{http://localhost/phpmyadmin} after
+    starting the Apache and MySQL/MariaDB services in the XAMPP Control Panel.
+  \end{examples}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Object-Oriented Data Model}
+  \begin{block}{Timeline: 1980s}
+    \begin{itemize}
+      \item Maps \textbf{object-oriented programming} concepts directly to
+            database storage.
+      \item Relation $\equiv$ Class \quad Tuple $\equiv$ Instance \quad
+            Column $\equiv$ Attribute \quad Stored Procedure $\equiv$ Method
+      \item Gave rise to semi-structured formats such as \textbf{XML} and
+            \textbf{JSON} for data exchange and persistence.
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{}
+    An \texttt{Item} class with attributes \texttt{name}, \texttt{price},
+    \texttt{category} can be serialised directly to JSON:\\[2pt]
+    \texttt{\{"name":"Gouda","price":3.49,"category":"Cheese"\}}
+  \end{examples}
+
+  The object-oriented model emerged because developers found the
+  \emph{impedance mismatch} between object-oriented code and relational tables
+  painful -- every object had to be manually mapped to rows and columns.
+  Object-oriented databases promised to eliminate this friction by persisting
+  objects natively.  Adoption was limited because relational systems were
+  already entrenched, but the ideas strongly influenced ORM frameworks
+  (Hibernate, SQLAlchemy, Django ORM) which bridge the two worlds.
+  We will revisit this in the Security \& ORM chapter.
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{ObjectStore (!)}
+  \begin{block}{Timeline: 1988 by Versant (originally Progress Software)}
+    \begin{itemize}
+      \item A database whose unit of storage is a \textbf{C++ object}.
+      \item Calling \texttt{new()} in C++ creates a \textbf{persistent object}
+            that survives process termination -- no separate ``save'' step.
+      \item Use cases: telecommunications, Geographic Information Systems (GIS),
+            financial trading systems.
+    \end{itemize}
+  \end{block}
+
+  ObjectStore showed that the boundary between ``in-memory data structures''
+  and ``persistent database records'' could be made nearly invisible to the
+  programmer.  The system handled serialisation, indexing, and concurrent
+  access automatically.  This concept re-appears in modern object-document
+  mappers and in-memory databases like Redis.
+
+  \medskip
+  ObjectStore is still in active use in niche domains where the original
+  object-oriented codebase is too large and too critical to replace.
+
+  \smallskip
+  \textit{(!) This topic is not part of the exam.}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{1990s -- The Quiet Decade}
+  \begin{block}{Consolidation Around the Relational Model}
+    \begin{itemize}
+      \item No major new database paradigm emerged in the 1990s.
+      \item SQL became an ISO/ANSI standard (SQL-89, SQL-92, SQL:1999).
+      \item Significant advances in \textbf{data warehousing} and
+            \textbf{analytical processing} (OLAP, star schemas, data marts).
+      \item MySQL (1995) made relational databases accessible to web developers.
+    \end{itemize}
+  \end{block}
+
+  The 1990s were important not because of new data models but because of
+  \emph{maturation}.  Query optimisers became sophisticated enough that SQL
+  performance rivalled hand-tuned navigational code.  Replication, backup,
+  and transaction management were standardised.  The internet boom at the end
+  of the decade set the stage for the next wave of innovation -- the
+  \emph{NoSQL} movement -- which was driven by internet-scale data volumes
+  that relational systems struggled to handle.
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Columnar Data Model}
+  \begin{block}{Timeline: 2000s -- Apache Cassandra, HBase, Parquet}
+    \begin{itemize}
+      \item In a \textbf{row-based} store (traditional RDBMS), each row is
+            stored contiguously on disk.
+      \item In a \textbf{columnar} store, each \emph{column} is stored
+            contiguously -- all values for one attribute sit together.
+      \item Reading an analytical query touching only 3 of 100 columns means
+            reading $\approx$3\% of the data instead of 100\%.
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{}
+    \texttt{SELECT AVG(price) FROM products WHERE category = 'Electronics'} \\
+    Only the \texttt{price} and \texttt{category} columns need to be read from
+    disk -- all other columns are skipped entirely.
+  \end{examples}
+
+  Columnar storage also enables \textbf{exceptional compression}: because all
+  values in a column share the same data type, techniques like run-length
+  encoding and dictionary encoding achieve very high compression ratios.
+  The trade-off is that \emph{writing} a single new row requires updating
+  many separate column files, making columnar stores slower for
+  transactional (OLTP) workloads.  They shine in analytical (OLAP) contexts.
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Apache Parquet (!)}
+  \begin{block}{Timeline: 2013 -- Apache (Twitter \& Cloudera)}
+    \begin{itemize}
+      \item A \textbf{columnar file format} for big-data processing
+            (Apache Spark, Hadoop, Hive, Presto).
+      \item Often described as a ``Big Data File Format'': data is spread
+            across multiple Parquet files rather than a single monolithic file.
+      \item Internal structure:
+            \textbf{Header} $\rightarrow$ Row Group 1 $\rightarrow$ Row Group 2
+            $\rightarrow \cdots \rightarrow$ \textbf{Footer}
+      \item Within each Row Group, column data is stored contiguously,
+            enabling efficient compression and selective column reads.
+    \end{itemize}
+  \end{block}
+
+  Parquet has become the de-facto standard for storing analytical datasets
+  in cloud data lakes (AWS S3, Azure Data Lake, Google Cloud Storage).
+  Its tight integration with Apache Arrow enables zero-copy reads directly
+  into in-memory data frames (pandas, Polars), making the transition from
+  storage to computation extremely fast.
+
+  \smallskip
+  \textit{(!) This topic is not part of the exam.}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Key-Value Data Model}
+  \begin{block}{Timeline: Concept from late 1970s; mainstream from 2000s}
+    \begin{itemize}
+      \item The \textbf{simplest NoSQL model}: every entry is a
+            \emph{key} $\mapsto$ \emph{value} pair.
+      \item The value can be anything: a string, an integer, a binary blob,
+            a serialised object -- the database does not interpret it.
+      \item \textbf{No schema}, no relationships, retrieval only by exact key.
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{}
+    \texttt{"session:u42f8"} $\mapsto$ \texttt{"\{userId:7, cart:[3,11,42]\}"}\\
+    \texttt{"rate\_limit:192.168.1.5"} $\mapsto$ \texttt{"47"}
+  \end{examples}
+
+  The key-value model's strength is raw speed: lookup by key is an O(1)
+  hash-table operation.  This makes it perfect for \textbf{caches},
+  \textbf{session stores}, and \textbf{temporary logging}.
+
+  \begin{alertblock}{Key Limitation}
+    You can only retrieve data by its exact key.  There is no way to ask
+    ``find all sessions belonging to users from Germany'' without scanning
+    every entry -- because the database has no knowledge of the value's
+    internal structure.  For queries by value, you need a different model.
+  \end{alertblock}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Redis}
+  \begin{block}{Timeline: 2009 by Salvatore Sanfilippo}
+    \begin{itemize}
+      \item The \textbf{most widely used key-value database} in the world.
+      \item \textbf{In-memory} store: all data lives in RAM $\rightarrow$
+            sub-millisecond read/write latency.
+      \item Optional \textbf{persistence} to disk (RDB snapshots, AOF log).
+      \item Supports richer value types beyond plain strings:
+            Lists, Sets, Sorted Sets, Hashes, Streams, HyperLogLogs, Bitmaps.
+    \end{itemize}
+  \end{block}
+
+  Redis is the backbone of many internet-scale architectures.  Common roles:
+
+  \begin{itemize}
+    \item \textbf{Cache layer} in front of a relational database
+    \item \textbf{Session store} for stateless web applications
+    \item \textbf{Pub/Sub message broker} between microservices
+    \item \textbf{Rate limiter} (atomic increment on a counter key)
+    \item \textbf{Leaderboard} (Sorted Set with score-based ranking)
+  \end{itemize}
+
+  A free hosted tier is available at \texttt{redis.io}; the source code is
+  open-source on GitHub.
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Document-Based Data Model}
+  \begin{block}{Timeline: Popular from 2000s onward}
+    \begin{itemize}
+      \item A \textbf{specialised key-value store} where the \emph{value} is a
+            structured \textbf{document} (JSON, BSON, or XML).
+      \item Documents are grouped into \textbf{collections}; no fixed schema
+            -- different documents in the same collection can have different fields.
+      \item Unlike plain key-value, you can \textbf{query by any field}
+            inside the document.
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{}
+    Document 1: \texttt{\{name:"Alice", email:"a@x.com"\}}\\
+    Document 2: \texttt{\{name:"Bob", email:"b@x.com", phone:"0711...", address:\{...\}\}}\\[4pt]
+    Both documents live in the same \texttt{users} collection despite
+    having different shapes.
+  \end{examples}
+
+  This \textbf{schema flexibility} makes document databases ideal for
+  rapidly evolving data (e.g.\ product catalogues where different product
+  types have completely different attributes) or for aggregating data from
+  many sources.  The trade-off is that consistency enforcement must be
+  handled in application code rather than by the database schema.
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{MongoDB}
+  \begin{block}{Timeline: 2009 by 10gen (now MongoDB Inc.)}
+    \begin{itemize}
+      \item Stores documents in \textbf{BSON} (Binary JSON) format --
+            a binary-encoded extension of JSON that supports additional types
+            (dates, binary data, ObjectId).
+      \item \textbf{Hierarchy}: Document $\subset$ Collection $\subset$
+            Database $\subset$ Cluster.
+      \item Drivers available for all major programming languages
+            (Python, Java, Node.js, C\#, Go, PHP, \ldots).
+      \item Free tier available at \texttt{mongodb.com} (MongoDB Atlas).
+    \end{itemize}
+  \end{block}
+
+  MongoDB popularised the document model and the term ``NoSQL'' in the
+  mainstream developer community.  It introduced an expressive query language
+  (MQL -- MongoDB Query Language) that operates on nested JSON structures,
+  aggregation pipelines for complex data transformations, and a flexible
+  indexing system.
+
+  \medskip
+  Common use cases: content management systems, product catalogues,
+  user-profile stores, real-time analytics, and mobile application backends.
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Graph-Based Data Model}
+  \begin{block}{Timeline: 1980s evolution of network model; mainstream 1990s--2000s}
+    \begin{itemize}
+      \item Data represented as \textbf{Nodes} (entities with properties)
+            connected by \textbf{Edges} (relationships with properties).
+      \item Both nodes \emph{and} edges can carry arbitrary key-value properties.
+      \item Queries traverse the graph to follow relationship chains of
+            arbitrary depth.
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{}
+    Social network: \texttt{(Alice)-[:FRIENDS\_WITH]->(Bob)-[:FRIENDS\_WITH]->(Carol)}\\
+    ``Find all friends-of-friends of Alice who live in Stuttgart'' is a
+    natural graph traversal, but painful in SQL (recursive CTEs or
+    multiple self-joins).
+  \end{examples}
+
+  Graph databases excel when \textbf{relationship traversal} is the dominant
+  access pattern: social networks, fraud detection (rings of suspicious
+  accounts), knowledge graphs, recommendation engines, and network/IT
+  infrastructure mapping.  In a relational database, deep traversals require
+  expensive recursive joins; in a graph database they are first-class operations.
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Neo4j}
+  \begin{block}{Timeline: 2010 by Neo Technology}
+    \begin{itemize}
+      \item Query language: \textbf{Cypher} -- a pattern-matching language
+            designed to be human-readable (ASCII-art graph patterns).
+      \item Components: \textbf{Nodes} (labelled circles), \textbf{Edges}
+            (directed, typed relationships), \textbf{Properties}
+            (key-value pairs on both).
+      \item Industries: insurance, banking, retail, life sciences, cybersecurity.
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{}
+    \texttt{MATCH (p:Person)-[:BOUGHT]->(i:Item) RETURN p, i}\\[4pt]
+    This returns every Person node and the Item nodes they bought, by
+    following \texttt{BOUGHT} edges -- equivalent to a SQL JOIN but
+    expressed as a graph pattern.
+  \end{examples}
+
+  Neo4j is the most widely deployed graph database.  Its native graph storage
+  engine stores adjacency lists directly on disk, making multi-hop traversals
+  orders of magnitude faster than relational equivalents.  A free ``AuraDB''
+  cloud tier is available for experimentation.
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Summary: Data Models Comparison}
+  \begin{block}{Comparison Table}
+    \scriptsize
+    \begin{tabular}{l l c c c}
+      \hline
+      \textbf{Data Model} & \textbf{Stored As} & \textbf{Simple} & \textbf{Flexible} & \textbf{Scalable} \\
+      \hline
+      Paper / File based   & Text                & \checkmark & \checkmark & $\times$ \\
+      Hierarchical         & Nodes \& Arcs       & \checkmark & $\times$   & $\times$ \\
+      Network-like         & Nodes \& Arcs       & \checkmark & $\times$   & $\times$ \\
+      Relational           & Tables              & $\sim$     & $\sim$     & $\sim$   \\
+      Object-Oriented      & Objects             & $\sim$     & $\sim$     & $\sim$   \\
+      Columnar             & Table / Columns     & $\sim$     & $\times$   & \checkmark \\
+      Key-Value            & Key-Value Pairs     & \checkmark & \checkmark & \checkmark \\
+      Document             & Documents           & \checkmark & \checkmark & \checkmark \\
+      Graph                & Nodes \& Edges      & $\sim$     & \checkmark & \checkmark \\
+      \hline
+    \end{tabular}
+  \end{block}
+
+  \begin{alertblock}{Important Caveat}
+    All ratings above are generalisations -- the real answer is always
+    \textbf{``it depends on the use case''}.  A relational database can scale
+    very well with proper indexing and sharding; a document database can be
+    inflexible if you force a rigid schema on it.
+  \end{alertblock}
+
+  \begin{block}{Rule of Thumb}
+    Choose your data model based on three factors: \textbf{(1)} the natural
+    structure of your data, \textbf{(2)} the query patterns your application
+    will execute most frequently, and \textbf{(3)} your scalability and
+    consistency requirements.  No single model is universally best.
+  \end{block}
+\end{frame}

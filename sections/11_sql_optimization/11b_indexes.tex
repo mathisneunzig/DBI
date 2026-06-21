@@ -1,0 +1,166 @@
+% ------------------------------------------------------------
+\begin{frame}{Indexes -- What They Are}
+  An \textbf{index} is a separate data structure maintained by the DBMS
+  alongside a table. It maps column values to the physical location of the
+  corresponding row, enabling fast lookups without scanning every row.
+
+  \medskip
+  \begin{block}{Analogy}
+    Think of the index at the back of a textbook. Instead of reading every
+    page to find ``normalization'', you look up the word in the index and
+    jump directly to the right page. A database index works the same way.
+  \end{block}
+
+  \begin{block}{Trade-offs}
+    \begin{tabular}{@{}ll@{}}
+      \toprule
+      \textbf{Benefit}                 & \textbf{Cost} \\
+      \midrule
+      Fast \texttt{SELECT} / \texttt{WHERE} & Extra disk space \\
+      Fast \texttt{JOIN} on foreign keys    & Slower \texttt{INSERT}/\texttt{UPDATE}/\texttt{DELETE} \\
+      Fast \texttt{ORDER BY} / \texttt{GROUP BY} & Must be maintained by DBMS \\
+      \bottomrule
+    \end{tabular}
+  \end{block}
+
+  \begin{alertblock}{Primary and Unique keys are automatically indexed}
+    MySQL always creates a \textbf{clustered B-tree index} on the primary
+    key. \texttt{UNIQUE} constraints also create an index automatically.
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{B-Tree Index -- How It Works}
+  The default index type in MySQL (and most relational DBMSs) is a
+  \textbf{B-Tree (Balanced Tree)} index.
+
+  \medskip
+  \begin{block}{Structure}
+    \begin{itemize}
+      \item The tree is sorted by the indexed column value.
+      \item The \textbf{root} splits the value range into subtrees.
+      \item \textbf{Internal nodes} further narrow the range.
+      \item \textbf{Leaf nodes} store the actual indexed values plus
+            pointers to the table rows (row IDs / primary key values).
+      \item The tree is always balanced -- every leaf is at the same depth,
+            so lookup time is $O(\log n)$ regardless of which value is
+            searched.
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{What B-Tree indexes support}
+    \begin{itemize}
+      \item \textbf{Equality}: \texttt{WHERE city = 'Berlin'} -- point lookup
+      \item \textbf{Range}: \texttt{WHERE price BETWEEN 5 AND 20} -- range scan
+      \item \textbf{Prefix}: \texttt{WHERE name LIKE 'Mül\%'} -- left-anchored
+      \item \textbf{Sorting}: \texttt{ORDER BY} on indexed columns can skip filesort
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}[fragile]{Creating and Dropping Indexes}
+  \begin{block}{Syntax}
+\begin{lstlisting}[style=sqlstyle]
+-- Create a simple index on one column
+CREATE INDEX idx_product_price ON product(price);
+
+-- Create a composite (multi-column) index
+CREATE INDEX idx_product_brand_price
+    ON product(brand_id, price);
+
+-- Create a unique index (also enforces uniqueness constraint)
+CREATE UNIQUE INDEX uq_product_sku ON product(sku);
+
+-- Show all indexes on a table
+SHOW INDEX FROM product;
+
+-- Remove an index
+DROP INDEX idx_product_price ON product;
+\end{lstlisting}
+  \end{block}
+
+  \begin{block}{When the planner uses an index}
+    The planner uses the index when it estimates that an index scan is
+    cheaper than a full table scan. For very small tables (a few hundred
+    rows), a full scan is often faster -- the planner will choose
+    accordingly.
+  \end{block}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Composite Indexes and Column Order}
+  A \textbf{composite index} covers multiple columns.
+  The order of columns in the index matters enormously.
+
+  \medskip
+  \begin{block}{The leftmost prefix rule}
+    A composite index on \texttt{(a, b, c)} can be used for:
+    \begin{itemize}
+      \item \texttt{WHERE a = ?} \quad -- uses index
+      \item \texttt{WHERE a = ? AND b = ?} \quad -- uses index
+      \item \texttt{WHERE a = ? AND b = ? AND c = ?} \quad -- uses index
+      \item \texttt{WHERE b = ?} \quad -- \textbf{does NOT use index}
+            (b is not the leftmost column)
+      \item \texttt{WHERE a = ? AND c = ?} \quad -- uses index on \texttt{a}
+            only, then filters \texttt{c} manually
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{Design tip}
+    Put the most selective (highest cardinality) column first.
+    If queries filter by \texttt{brand\_id} then optionally by \texttt{price},
+    the index should be \texttt{(brand\_id, price)}, not \texttt{(price, brand\_id)}.
+  \end{examples}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{Covering Indexes}
+  A \textbf{covering index} is an index that contains \emph{all} the columns
+  a query needs -- so the DBMS can answer the query entirely from the index
+  without touching the table rows at all.
+
+  \medskip
+  \begin{block}{Example}
+    Query: \texttt{SELECT price FROM product WHERE brand\_id = 5;}
+
+    \medskip
+    If the index is \texttt{(brand\_id, price)}, the engine finds the matching
+    \texttt{brand\_id} entries in the index and reads \texttt{price} directly
+    from the index leaf nodes. \textbf{No row lookup required.}
+  \end{block}
+
+  \begin{block}{When does it help most?}
+    \begin{itemize}
+      \item The table is very wide (many columns) but the query only needs a few
+      \item The table has many rows and the query is executed frequently
+      \item The \texttt{SELECT} list exactly matches the indexed columns
+    \end{itemize}
+    EXPLAIN output shows \texttt{Extra: Using index} when a covering index is used.
+  \end{block}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{When NOT to Use an Index}
+  Indexes are not always the answer. Knowing when to \emph{avoid} them is
+  equally important.
+
+  \medskip
+  \begin{block}{Situations where indexes hurt more than they help}
+    \begin{itemize}
+      \item \textbf{Very small tables}: a full scan of 500 rows is faster
+            than an index lookup + row fetch.
+      \item \textbf{Low-cardinality columns}: a \texttt{BOOLEAN} column or a
+            \texttt{gender} column with only 2--3 distinct values. An index
+            here hardly reduces the rows scanned.
+      \item \textbf{Columns modified very frequently}: every
+            \texttt{UPDATE}/\texttt{INSERT}/\texttt{DELETE} must update the
+            index too. On write-heavy tables, too many indexes slow down
+            writes significantly.
+      \item \textbf{Functions on indexed columns}: \texttt{WHERE
+            YEAR(created\_at) = 2024} defeats the index on
+            \texttt{created\_at}. Rewrite as
+            \texttt{WHERE created\_at >= '2024-01-01' AND created\_at < '2025-01-01'}.
+    \end{itemize}
+  \end{block}
+\end{frame}

@@ -1,0 +1,30 @@
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{phpMyAdmin}
+
+  \begin{block}{What Is phpMyAdmin?}
+    \textbf{phpMyAdmin} is a free, browser-based administration tool for MySQL and MariaDB databases. It ships pre-installed with XAMPP and requires no additional setup.\\[0.4em]
+    Access it at: \texttt{http://localhost/phpmyadmin} (after starting MySQL in XAMPP)
+  \end{block}
+
+  \begin{block}{Core Capabilities}
+    \begin{itemize}
+      \item Create, modify, and drop \textbf{databases} and \textbf{tables}
+      \item Execute \textbf{SQL queries} directly in the browser
+      \item \textbf{Import} (CSV, SQL dump) and \textbf{export} data in multiple formats
+      \item Manage \textbf{users and permissions}
+      \item Browse and edit table contents visually (without writing SQL)
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{UI Layout}
+    \begin{itemize}
+      \item \textbf{Left panel}: collapsible tree of databases and their tables
+      \item \textbf{Right panel}: operations area -- SQL editor, table structure view, import/export forms
+    \end{itemize}
+  \end{block}
+
+  \begin{alertblock}{Limitation}
+    phpMyAdmin is not well suited for large datasets or complex schema design. For entity-relationship diagrams and structured schema work, use \textbf{MySQL Workbench} instead.
+  \end{alertblock}
+\end{frame}

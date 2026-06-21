@@ -1,0 +1,117 @@
+% ---------------------------------------------------------------------------
+\begin{frame}{4NF \textbf{(!)}}
+  \begin{block}{Definition \textbf{(!)}}
+    A relation is in \textbf{4NF} if it is in BCNF and has no
+    \textbf{non-trivial multi-valued dependencies (MVDs)}.
+
+    An MVD $A \twoheadrightarrow B$ is \emph{non-trivial} if $B \not\subseteq A$
+    and $A \cup B \neq R$.
+  \end{block}
+
+  \begin{itemize}
+    \item \textbf{The Problem:}
+          $\texttt{CustomerCode} \twoheadrightarrow \texttt{Phones}$ and
+          $\texttt{CustomerCode} \twoheadrightarrow \texttt{Addresses}$.\\
+          Phones and addresses are \emph{independent} sets associated with the
+          same customer.
+    \item After 1NF, storing both in one table forces a \emph{Cartesian product}:
+          every phone is paired with every address, producing redundant and
+          potentially spurious rows.
+    \item \textbf{Fix:} Decompose into two tables:
+          \begin{itemize}
+            \item \texttt{Customers\_Phones(\underline{CustomerCode, Phone})}
+            \item \texttt{Customers\_Addresses(\underline{CustomerCode, Address})}
+          \end{itemize}
+    \item Now each independent multi-valued fact lives in its own table; no
+          Cartesian product arises.
+  \end{itemize}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{5NF \textbf{(!)}}
+  \begin{block}{Definition \textbf{(!)}}
+    A relation is in \textbf{5NF} (also called \emph{Project-Join Normal Form,
+    PJNF}) if it is in 4NF and cannot be further decomposed in a
+    \textbf{lossless} way.
+  \end{block}
+
+  \begin{itemize}
+    \item \textbf{Lossless decomposition:} Decomposing $R$ into
+          $R_1, R_2, \ldots$ is lossless if
+          $R_1 \bowtie R_2 \bowtie \cdots = R$ exactly (no spurious tuples).
+    \item If decomposing into 2 tables produces extra (spurious) tuples when
+          joined back, the decomposition is \emph{lossy} and a 3-table
+          decomposition is required.
+    \item \textbf{Example:} A \texttt{Lecturer-Course-Subject} table with
+          complex business constraints (which lecturers teach which subjects in
+          which courses) may need 3 separate tables to decompose losslessly.
+    \item 5NF deals with \textbf{join dependencies} --- generalisations of
+          multi-valued dependencies.
+    \item Rarely implemented in practice; most experts stop at 3NF or BCNF.
+  \end{itemize}
+
+  \begin{alertblock}{Practical Note}
+    Verifying 5NF requires checking all possible join dependencies, which is
+    computationally expensive and usually unnecessary for typical business
+    applications.
+  \end{alertblock}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{Even Higher Normal Forms \textbf{(!)}}
+  Beyond 5NF, a number of further normal forms have been defined, mostly in
+  academic research.
+
+  \begin{itemize}
+    \item \textbf{6NF:} Every relation contains the primary key and
+          \emph{at most one} non-key attribute.  Useful for
+          \textbf{temporal databases} where attributes change independently over
+          time.  Proposed by C.\ J.\ Date, Hugh Darwen, and Nikos Lorentzos
+          (2002).
+    \item \textbf{EKNF (Elementary Key NF):} A stricter version of 3NF that
+          rules out certain 3NF-compliant but anomalous schemas.
+    \item \textbf{ETNF (Essential Tuple NF):} A stricter version of 4NF;
+          eliminates certain redundancies not addressed by 4NF.
+    \item \textbf{DKNF (Domain-Key NF):} Every integrity constraint in the
+          relation is a \emph{logical consequence} of domain constraints and key
+          constraints.  Considered the ``ultimate'' normal form --- if achieved,
+          all anomalies are guaranteed to be absent.
+  \end{itemize}
+
+  \begin{alertblock}{Practical Guidance}
+    Most of these forms are \textbf{academic}.  In practice:
+    \begin{itemize}
+      \item Aim for \textbf{3NF minimum} for all production schemas.
+      \item \textbf{BCNF is ideal} when dependency preservation can be
+            verified externally.
+    \end{itemize}
+  \end{alertblock}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{Normal Forms: The Big Picture \textbf{(!)}}
+  \small
+  \begin{tabular}{lcccccccc}
+    \hline
+    \textbf{Constraint} & \textbf{UNF} & \textbf{1NF} & \textbf{2NF} & \textbf{3NF} & \textbf{BCNF} & \textbf{4NF} & \textbf{5NF} & \textbf{6NF} \\
+    \hline
+    Unique rows                        &   & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+    Atomic values (1NF)                &   &            & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+    No partial FDs (2NF)               &   &            &            & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+    No transitive FDs (3NF)            &   &            &            &            & \checkmark & \checkmark & \checkmark & \checkmark \\
+    Every FD has superkey determinant  &   &            &            &            &            & \checkmark & \checkmark & \checkmark \\
+    No nontrivial MVDs (4NF)           &   &            &            &            &            &            & \checkmark & \checkmark \\
+    No lossy decompositions (5NF)      &   &            &            &            &            &            &            & \checkmark \\
+    Only trivial join dependencies     &   &            &            &            &            &            &            &            \\
+    (6NF)                              &   &            &            &            &            &            &            & \checkmark \\
+    \hline
+  \end{tabular}
+  \normalsize
+
+  \vspace{8pt}
+  \begin{block}{Reading This Table}
+    Each column represents a normal form.  A \checkmark{} means the constraint
+    is \emph{guaranteed} by that normal form and all higher ones.  The table
+    shows how each NF strictly extends its predecessor.
+  \end{block}
+\end{frame}

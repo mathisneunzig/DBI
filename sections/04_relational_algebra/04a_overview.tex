@@ -1,0 +1,62 @@
+\section{Relational Algebra}
+
+% ----------------------------------------------------------
+\begin{frame}{What is Relational Algebra?}
+  Relational algebra is a \textbf{formal, procedural query language} for
+  relational databases.  Unlike declarative languages (where you state
+  \emph{what} you want), relational algebra requires you to specify
+  \emph{how} to retrieve data by composing a sequence of well-defined
+  operations.  It forms the mathematical backbone of SQL and every other
+  relational query language.
+
+  \begin{block}{Core Properties}
+    \begin{itemize}
+      \item Every operation takes one or two \emph{relations} as input and
+            produces exactly one \emph{relation} as output — the
+            \textbf{closure property}.  This means operations can be
+            composed freely.
+      \item Provides the theoretical foundation for SQL; every SQL
+            \texttt{SELECT} statement can be translated into a relational
+            algebra expression.
+      \item By combining operations arbitrarily, queries of any complexity
+            can be expressed.
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Named Operators}
+    Union $\cup$, Intersection $\cap$, Difference $\setminus$, Cartesian
+    Product $\times$, Division $\div$, Restriction $\sigma$, Projection
+    $\pi$, Rename $\rho$, Join $\bowtie$
+  \end{block}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Overview of All Operators}
+  The table below lists all operators covered in this lecture.  Unary
+  operators act on a single relation; binary operators combine two
+  relations.  Join operators are a special family of binary operators and
+  are treated separately in later frames.
+
+  \vspace{0.4em}
+  \begin{center}
+    \footnotesize
+    \begin{tabular}{llll}
+      \hline
+      \textbf{Type} & \textbf{Symbol} & \textbf{Operator} & \textbf{Description} \\
+      \hline
+      Binary & $\cup$           & Union              & All tuples from both relations, no duplicates \\
+      Binary & $\cap$           & Intersection       & Only tuples common to both \\
+      Binary & $\setminus$      & Difference         & Tuples in $R_1$ but not in $R_2$ \\
+      Binary & $\times$         & Cartesian Product  & Every combination of tuples \\
+      Binary & $\div$           & Division           & Tuples in $R_1$ associated with ALL tuples in $R_2$ \\
+      Unary  & $\sigma$         & Restriction        & Filter rows by condition \\
+      Unary  & $\pi$            & Projection         & Select specific columns \\
+      Unary  & $\rho$           & Rename             & Rename relation or attributes \\
+      Unary  & $\delta$         & Deduplication      & Remove duplicate tuples \\
+      Unary  & $\gamma$         & Grouping/Aggregation & Group and aggregate \\
+      Unary  & $\tau$           & Sorting            & Sort tuples \\
+      Join   & $\bowtie$        & Join               & Combine related tuples from two relations \\
+      \hline
+    \end{tabular}
+  \end{center}
+\end{frame}

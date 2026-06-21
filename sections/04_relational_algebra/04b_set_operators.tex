@@ -1,0 +1,113 @@
+% ----------------------------------------------------------
+\begin{frame}{Union $\cup$}
+  The union operator \textbf{merges all tuples} from two relations into a
+  single result relation.  Duplicate tuples — tuples that appear in both
+  input relations — are \emph{eliminated automatically}, just as in
+  mathematical set union.
+
+  \begin{block}{Key Points}
+    \begin{itemize}
+      \item Both relations must have the \textbf{same schema} (same number
+            of attributes with compatible domains).  This requirement is
+            called \emph{union compatibility}.
+      \item Syntax: $R_1 \cup R_2$
+      \item The result contains \emph{at most} $|R_1| + |R_2|$ tuples;
+            duplicate tuples reduce this count.
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{Example}
+    \textbf{EmployeesA $\cup$ EmployeesB} — two employee tables from
+    different departments or branches are combined into one unified list.
+    Every employee appears exactly once, even if a person happened to be
+    recorded in both tables.
+  \end{examples}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Intersection $\cap$}
+  The intersection operator returns only those tuples that are present in
+  \textbf{both} input relations simultaneously.  It answers the question
+  ``what do these two sets have in common?''
+
+  \begin{block}{Key Points}
+    \begin{itemize}
+      \item Both relations must be \emph{union-compatible} (same schema).
+      \item Syntax: $R_1 \cap R_2$
+      \item Intersection can be \textbf{derived} from the difference
+            operator — it does not have to be a primitive operation:
+            \[
+              R_1 \cap R_2 \;=\; R_1 \setminus (R_1 \setminus R_2)
+            \]
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{Example}
+    \textbf{Employees $\cap$ Volunteers} — given a relation of all
+    employees and a relation of all people who volunteered for the
+    Christmas party, the result contains exactly the employees who also
+    volunteered.  People who volunteered but are not employees are
+    excluded.
+  \end{examples}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Difference $\setminus$}
+  The difference operator returns all tuples that are in $R_1$
+  \textbf{but not} in $R_2$.  It is sometimes written with a minus sign:
+  $R_1 - R_2$.
+
+  \begin{alertblock}{Order Matters!}
+    Unlike union and intersection, difference is \textbf{not commutative}:
+    $R_1 \setminus R_2 \neq R_2 \setminus R_1$ in general.  Swapping the
+    operands gives an entirely different result.
+  \end{alertblock}
+
+  \begin{block}{Key Points}
+    \begin{itemize}
+      \item Both relations must be union-compatible.
+      \item Syntax: $R_1 \setminus R_2$
+      \item The \textbf{Symmetric Difference} $\Delta$ returns tuples that
+            appear in \emph{either} relation but \emph{not both}:
+            \[
+              \Delta = (R_1 \setminus R_2) \cup (R_2 \setminus R_1)
+            \]
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{Examples}
+    \begin{itemize}
+      \item \textbf{Employees $\setminus$ Volunteers} — employees who did
+            \emph{not} volunteer.
+      \item \textbf{Volunteers $\setminus$ Employees} — volunteers who are
+            \emph{not} employees (e.g.\ external helpers).
+    \end{itemize}
+  \end{examples}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Cartesian Product $\times$}
+  The Cartesian product (also called \emph{cross product}) combines
+  \textbf{every} tuple of $R_1$ with \textbf{every} tuple of $R_2$,
+  regardless of whether the combination is meaningful.
+
+  \begin{block}{Key Points}
+    \begin{itemize}
+      \item Result size: $|R_1| \times |R_2|$ tuples.
+      \item The result schema contains \emph{all} attributes from both
+            relations (concatenated).
+      \item Rarely useful on its own — it produces the full cross product
+            including many nonsensical or redundant combinations.
+      \item Usually the \textbf{precursor to a Join}: a Join is simply a
+            Cartesian Product followed by a Restriction that filters only
+            the meaningful combinations.
+      \item Syntax: $R_1 \times R_2$
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{Example}
+    \textbf{Letters}$(\{A, B, C\})$ $\times$ \textbf{Numbers}$(\{1, 2,
+    3\})$ yields 9 tuples: $(A,1), (A,2), (A,3), (B,1), \ldots, (C,3)$.
+    Without further filtering, all 9 combinations appear in the result.
+  \end{examples}
+\end{frame}

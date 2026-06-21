@@ -1,0 +1,89 @@
+% ----------------------------------------------------------
+\begin{frame}{Laws: Commutative and Associative}
+  Query optimisers exploit algebraic laws to reorder operations without
+  changing the result, thereby choosing the most efficient execution plan.
+  The following laws hold for relational algebra:
+
+  \begin{block}{Commutativity}
+    \begin{itemize}
+      \item Union: $A \cup B = B \cup A$
+      \item Intersection: $A \cap B = B \cap A$
+      \item Cartesian Product: $A \times B = B \times A$
+      \item Join: $A \bowtie B = B \bowtie A$
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Associativity}
+    \begin{itemize}
+      \item Union: $(A \cup B) \cup C = A \cup (B \cup C)$
+      \item Intersection: $(A \cap B) \cap C = A \cap (B \cap C)$
+      \item Cartesian Product: $(A \times B) \times C = A \times (B \times C)$
+      \item Join: $(A \bowtie B) \bowtie C = A \bowtie (B \bowtie C)$
+    \end{itemize}
+  \end{block}
+
+  These laws allow a DBMS to, for example, join the \emph{smallest} two
+  tables first, drastically reducing the size of intermediate results.
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Laws: Restriction Rules (!)}
+  \begin{alertblock}{Note: Not Required for Exam}
+    The following equivalences are important for understanding query
+    optimisation but will not be examined.
+  \end{alertblock}
+
+  Restrictions are cheap to apply and can often be \emph{pushed down}
+  closer to the base relations, reducing the number of tuples processed by
+  subsequent (more expensive) operations.
+
+  \begin{block}{Key Equivalences}
+    \begin{itemize}
+      \item Chaining and merging:
+            $\sigma_{C_1}(\sigma_{C_2}(R)) = \sigma_{C_2}(\sigma_{C_1}(R))
+             = \sigma_{C_1 \wedge C_2}(R)$
+      \item Distributing over union:
+            $\sigma_C(R_1 \cup R_2) = \sigma_C(R_1) \cup \sigma_C(R_2)$
+      \item Distributing over join:
+            $\sigma_C(R_1 \bowtie R_2) = \sigma_C(R_1) \bowtie \sigma_C(R_2)$
+            \quad (push restrictions \emph{into} the join operands)
+      \item Commuting with projection:
+            $\sigma_C(\pi_A(R)) = \pi_A(\sigma_C(R))$
+            \quad (apply restriction before projection)
+      \item Distributing disjunction:
+            $\sigma_{C_1}(R) \vee \sigma_{C_2}(R) = \sigma_{C_1}(R) \cup \sigma_{C_2}(R)$
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Additional Laws (!)}
+  \begin{alertblock}{Note: Not Required for Exam}
+    These rules deepen understanding of the algebra but are not
+    examinable.
+  \end{alertblock}
+
+  \begin{block}{Pushing Conditions to Where They Belong}
+    If a restriction condition $C$ only references attributes of $R_2$, it
+    can be moved inside the join:
+    \[
+      \sigma_{C_{\text{on } R_2}}(R_1 \bowtie R_2)
+        \;=\; R_1 \bowtie \sigma_{C_{\text{on } R_2}}(R_2)
+    \]
+    Applying the filter to $R_2$ \emph{before} the join reduces the
+    number of tuples that need to be combined.
+  \end{block}
+
+  \begin{block}{Division as the Inverse of Cartesian Product}
+    \[
+      R_1 = (R_1 \times R_2) \div R_2
+    \]
+    Just as multiplication and division are inverse arithmetic operations,
+    division undoes a Cartesian product.  This identity confirms the
+    intuitive meaning of division.
+  \end{block}
+
+  These rules collectively form the foundation on which real-world DBMS
+  query optimisers build their rewriting and cost-based optimisation
+  strategies.
+\end{frame}

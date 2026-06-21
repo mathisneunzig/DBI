@@ -1,0 +1,150 @@
+% ----------------------------------------------------------
+\begin{frame}[fragile]{WHERE -- Filtering Rows}
+  \begin{block}{Basic Filtering}
+\begin{lstlisting}[style=sqlstyle]
+SELECT * FROM product WHERE price > 5;
+SELECT name FROM brand WHERE city = 'Hamburg';
+\end{lstlisting}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{WHERE} filters \textbf{which rows} are included in the
+          result -- only rows for which the condition evaluates to
+          \texttt{TRUE} are kept.
+    \item String comparisons require \textbf{single quotes}
+          (\texttt{'Hamburg'}), not double quotes.
+    \item \texttt{NULL} comparisons are a common pitfall: \texttt{= NULL}
+          always evaluates to \texttt{NULL} (unknown), never \texttt{TRUE}.
+          Always use \texttt{IS NULL} or \texttt{IS NOT NULL}.
+    \item Logical operators (\texttt{AND}, \texttt{OR}, \texttt{NOT}) can
+          combine multiple conditions; use parentheses for grouping.
+  \end{itemize}
+
+  \begin{block}{Logical Operator Precedence}
+    \texttt{()} $\to$ \texttt{NOT} $\to$ \texttt{AND} $\to$ \texttt{OR}\\[2pt]
+    When in doubt, add parentheses -- they cost nothing and prevent subtle
+    bugs caused by unexpected precedence.
+  \end{block}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{WHERE -- Logical Operators}
+  \begin{block}{AND, OR, NOT}
+\begin{lstlisting}[style=sqlstyle]
+-- AND: both conditions must be true
+SELECT * FROM brand
+WHERE city = 'Hamburg' AND legal_form = 'AG';
+
+-- OR: at least one condition must be true
+SELECT * FROM employee
+WHERE department_id = 1 OR first_name = 'Mathis';
+
+-- NOT: negates the condition
+SELECT * FROM product WHERE NOT unit_id = 'KG';
+
+-- Combining with parentheses
+SELECT * FROM brand
+WHERE legal_form = 'KG'
+  AND (city = 'Hamburg' OR city = 'Berlin');
+\end{lstlisting}
+  \end{block}
+
+  \begin{alertblock}{Common Mistake: Missing Parentheses}
+    Without parentheses in the last example, \texttt{AND} binds tighter than
+    \texttt{OR}, so the query would be interpreted as
+    \texttt{(legal\_form = 'KG' AND city = 'Hamburg') OR city = 'Berlin'} --
+    a completely different result!
+  \end{alertblock}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{WHERE -- Comparison and BETWEEN}
+  \begin{block}{Standard Operators and BETWEEN / IN}
+\begin{lstlisting}[style=sqlstyle]
+-- Standard comparison operators
+SELECT * FROM product WHERE price >= 5;
+SELECT * FROM product WHERE alcohol <> 0; -- != also works
+
+-- BETWEEN (inclusive on both ends)
+SELECT * FROM product WHERE price BETWEEN 2 AND 5;
+
+-- IN (equivalent to multiple OR conditions)
+SELECT * FROM brand
+WHERE city IN ('Hamburg', 'Berlin', 'Muenchen');
+\end{lstlisting}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{<>} and \texttt{!=} both mean ``not equal'';
+          \texttt{<>} is the SQL standard, \texttt{!=} is widely supported
+          as an alias.
+    \item \texttt{BETWEEN} is \textbf{inclusive} on both bounds:
+          \texttt{BETWEEN 2 AND 5} includes the values 2 and 5.
+    \item \texttt{IN} is more readable than chaining many \texttt{OR}
+          conditions and the query optimiser treats them equivalently.
+          \texttt{NOT IN} is the logical negation.
+  \end{itemize}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{WHERE -- LIKE for Pattern Matching}
+  \begin{block}{Wildcard Characters}
+\begin{lstlisting}[style=sqlstyle]
+-- % matches zero, one, or many characters
+SELECT * FROM employee WHERE name LIKE 'M%';     -- starts with M
+SELECT * FROM brand   WHERE name LIKE '%GmbH';   -- ends with GmbH
+SELECT * FROM product WHERE name LIKE '%milk%';  -- contains 'milk'
+
+-- _ matches exactly one character
+SELECT * FROM brand WHERE name LIKE '_ike';  -- 4-letter names ending 'ike'
+SELECT * FROM brand WHERE name LIKE '%a_';  -- 2nd-to-last letter is 'a'
+\end{lstlisting}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{\%} is the most commonly used wildcard; \texttt{\_}
+          (underscore) is used when the exact position matters.
+    \item In MySQL with the default collation, \texttt{LIKE} is
+          \textbf{case-insensitive}.  This behaviour depends on the
+          table's collation setting.
+  \end{itemize}
+
+  \begin{alertblock}{Performance: Avoid Leading Wildcards}
+    \texttt{LIKE '\%term'} (leading \texttt{\%}) \textbf{cannot use an
+    index} and forces a full table scan.  On large tables this can be
+    orders of magnitude slower than \texttt{LIKE 'term\%'}.
+  \end{alertblock}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{WHERE -- NULL Handling}
+  \begin{block}{Testing for NULL}
+\begin{lstlisting}[style=sqlstyle]
+-- Correct: use IS NULL / IS NOT NULL
+SELECT * FROM stock WHERE storage_id IS NOT NULL;
+SELECT * FROM stock WHERE best_before_date IS NULL;
+\end{lstlisting}
+  \end{block}
+
+  \begin{alertblock}{= NULL Never Works}
+    \texttt{WHERE column = NULL} always evaluates to \texttt{NULL}
+    (unknown), \textbf{never} \texttt{TRUE}.  The row is therefore never
+    returned.  This is one of the most frequent beginner mistakes in SQL.
+  \end{alertblock}
+
+  \begin{block}{NULL Semantics}
+    \begin{itemize}
+      \item \texttt{NULL} means \emph{unknown} or \emph{not applicable} --
+            it is \textbf{not} the same as zero, the empty string, or
+            \texttt{false}.
+      \item \textbf{NULL propagates}: any arithmetic or comparison
+            involving \texttt{NULL} yields \texttt{NULL}.
+            E.g.\ \texttt{NULL + 5 = NULL},
+            \texttt{NULL > 0 = NULL}.
+      \item Design decision: use \texttt{NULL} for truly optional attributes
+            where no value is appropriate; use a \texttt{DEFAULT} value
+            (e.g.\ \texttt{0} or \texttt{''}) where a sensible default
+            exists.
+    \end{itemize}
+  \end{block}
+\end{frame}

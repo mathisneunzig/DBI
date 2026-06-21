@@ -1,0 +1,31 @@
+\section{Object-Relational Mapping}
+
+\begin{frame}{Object-Relational Mapping (ORM)}
+  \begin{block}{Definition}
+    An \textbf{ORM (Object-Relational Mapper)} is a software library that automatically translates
+    between the relational database world (tables, rows, columns) and the object-oriented
+    programming world (classes, instances, fields), allowing developers to work with database data
+    using the idioms of their programming language rather than writing raw SQL.
+  \end{block}
+
+  \medskip
+  \textbf{Conceptual mapping:}
+
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    \textbf{Relational Database Concept} & \textbf{Object-Oriented Equivalent (Java)} \\
+    \midrule
+    Relation (Table)      & Class \\
+    Tuple (Row)           & Instance (object) of the class \\
+    Attribute (Column)    & Field / property of the class \\
+    Primary Key           & \texttt{id} field (often auto-generated) \\
+    Foreign Key           & Reference (object pointer) to another class instance \\
+    Stored Procedure      & Method on the class or repository \\
+    \bottomrule
+  \end{tabular}
+
+  \medskip
+  Popular ORM frameworks: \textbf{Hibernate} and \textbf{JPA} (Java), \textbf{SQLAlchemy} (Python),
+  \textbf{ActiveRecord} (Ruby on Rails), \textbf{Eloquent} (PHP / Laravel),
+  \textbf{Entity Framework} (.NET).
+\end{frame}

@@ -1,0 +1,32 @@
+\subsection{Data Control Language}
+\begin{frame}[fragile]{GRANT and REVOKE (DCL)}
+  \begin{block}{Controlling Access to Database Objects}
+\begin{lstlisting}[style=sqlstyle]
+-- Grant all privileges on a database to a user
+GRANT ALL ON supermarket.* TO 'admin'@'localhost';
+
+-- Grant only SELECT on the whole database
+GRANT SELECT ON supermarket.* TO 'reader'@'%';
+
+-- Grant specific privileges on a single table
+GRANT INSERT, UPDATE ON supermarket.product
+    TO 'editor'@'localhost';
+
+-- Revoke a privilege
+REVOKE INSERT ON supermarket.product
+    FROM 'editor'@'localhost';
+\end{lstlisting}
+  \end{block}
+
+  \begin{block}{Principle of Least Privilege}
+    \begin{itemize}
+      \item Grant only the \textbf{minimum permissions} a user or
+            application actually needs to do its job.
+      \item \textbf{Never} run application code as the \texttt{root} (or
+            \texttt{sa}) database user.
+      \item \texttt{'user'@'\%'} allows connections from \textbf{any host};
+            \texttt{'user'@'localhost'} restricts to the same machine only.
+            Prefer the more restrictive option wherever possible.
+    \end{itemize}
+  \end{block}
+\end{frame}

@@ -1,0 +1,95 @@
+\subsection{Data Definition Language}
+\begin{frame}[fragile]{INSERT INTO}
+  \begin{block}{Adding Rows to a Table}
+\begin{lstlisting}[style=sqlstyle]
+-- Insert a single row (explicit column list)
+INSERT INTO unit (id, name) VALUES ('T', 'ton');
+
+-- Insert multiple rows at once
+INSERT INTO unit (id, name)
+VALUES ('KG', 'kilogram'),
+       ('G',  'gram'),
+       ('L',  'litre');
+
+-- Insert from a SELECT result
+INSERT INTO archive_orders
+SELECT * FROM orders WHERE order_date < '2020-01-01';
+\end{lstlisting}
+  \end{block}
+
+  \begin{itemize}
+    \item Columns not listed in the column list receive their
+          \texttt{DEFAULT} value, or \texttt{NULL} if no default is defined.
+    \item \texttt{AUTO\_INCREMENT} columns (typically the primary key) are
+          \textbf{omitted} from the column list -- the database assigns the
+          next integer value automatically.
+    \item When inserting into a table with \textbf{foreign key constraints},
+          the referenced row must already exist -- otherwise the insert is
+          rejected with a constraint violation error.
+  \end{itemize}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{UPDATE}
+  \begin{block}{Modifying Existing Rows}
+\begin{lstlisting}[style=sqlstyle]
+-- Update one column for a specific row
+UPDATE employee
+SET last_name = 'Miller'
+WHERE id = 12;
+
+-- Update multiple columns using expressions
+UPDATE product
+SET price         = price * 1.1,
+    last_modified = NOW()
+WHERE brand_id = 5;
+
+-- DANGER: UPDATE without WHERE affects ALL rows!
+UPDATE product SET price = 0; -- sets every product's price to zero!
+\end{lstlisting}
+  \end{block}
+
+  \begin{alertblock}{Always Include a WHERE Clause}
+    An \texttt{UPDATE} without \texttt{WHERE} modifies \textbf{every single
+    row} in the table.  Before running any \texttt{UPDATE}, test your
+    \texttt{WHERE} condition with a \texttt{SELECT} first to confirm you
+    are targeting exactly the right rows.  Consider enabling
+    \texttt{SET SQL\_SAFE\_UPDATES = 1} in MySQL to prevent accidental
+    full-table updates.
+  \end{alertblock}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{DELETE}
+  \begin{block}{Removing Rows from a Table}
+\begin{lstlisting}[style=sqlstyle]
+-- Delete specific rows
+DELETE FROM employee WHERE department_id = 5;
+
+-- Delete with JOIN condition (MySQL syntax)
+DELETE product
+FROM product
+INNER JOIN brand ON product.brand_id = brand.id
+WHERE brand.country = 'USA';
+
+-- DANGER: DELETE without WHERE empties the table!
+DELETE FROM employee; -- removes every row!
+\end{lstlisting}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{DELETE} removes rows but \textbf{keeps the table
+          structure} (schema, indexes, constraints).  To remove the table
+          entirely, use \texttt{DROP TABLE}.
+    \item \texttt{TRUNCATE TABLE employee} is faster than
+          \texttt{DELETE FROM employee} for emptying a table (it
+          deallocates data pages directly), but it cannot be rolled back in
+          some DBMSs and resets \texttt{AUTO\_INCREMENT} counters.
+  \end{itemize}
+
+  \begin{alertblock}{Always Include a WHERE Clause}
+    The same warning as for \texttt{UPDATE} applies: test with a
+    \texttt{SELECT} first.  Deleted rows cannot be recovered without a
+    backup.
+  \end{alertblock}
+\end{frame}

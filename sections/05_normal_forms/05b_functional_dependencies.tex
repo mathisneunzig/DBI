@@ -1,0 +1,63 @@
+% ---------------------------------------------------------------------------
+\begin{frame}{Functional Dependencies}
+  \begin{block}{Definition}
+    A \textbf{functional dependency (FD)} $A \to B$ holds in a relation if,
+    whenever two tuples agree on the value(s) of $A$, they must also agree on
+    the value(s) of $B$.  We say ``$A$ \emph{functionally determines} $B$''.
+  \end{block}
+
+  \begin{columns}[t]
+    \begin{column}{0.48\textwidth}
+      \textbf{Notation}
+      \begin{itemize}
+        \item $A \to B$ --- ``A determines B''\\
+              Knowing $A$'s value fixes $B$'s value exactly.
+        \item $AB \to C$ --- ``A and B together determine C''\\
+              Both attributes on the left are required.
+        \item $A \twoheadrightarrow B$ --- ``A multi-determines B''\\
+              $A$ determines a \emph{set} of $B$ values (multivalued dependency,
+              covered in 4NF).
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \textbf{Examples}
+      \begin{itemize}
+        \item $\texttt{StudentID} \to \texttt{StudentName}$\\
+              Each student ID maps to exactly one name.
+        \item $\texttt{CourseID} \to \texttt{CourseName}$\\
+              Each course ID maps to exactly one name.
+        \item $\texttt{AlbumID} \to \texttt{Title, MainArtist, Genre, Release}$\\
+              The album ID determines all other album-level attributes.
+        \item $\texttt{AlbumID, Song} \to \texttt{FeaturedArtist}$\\
+              The combination of album and song determines the featured artist.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{Types of Functional Dependencies}
+  Understanding the \emph{type} of an FD is essential for knowing which normal
+  form it violates and how to fix it.
+
+  \begin{itemize}
+    \item \textbf{Trivial FD:} The dependent is a subset of the determinant.
+          Example: $AB \to B$.  Always true by definition; carries no
+          information about the data.
+    \item \textbf{Non-trivial FD:} The dependent is \emph{not} part of the
+          determinant.  Example: $A \to B$ where $B \notin A$.  These are the
+          interesting dependencies to analyse.
+    \item \textbf{Fully Functional FD:} $AB \to C$ holds, and \emph{neither}
+          $A \to C$ nor $B \to C$ alone holds.  Both $A$ and $B$ are
+          genuinely needed.
+    \item \textbf{Partial FD:} $AB \to C$ holds, but also $A \to C$ alone
+          holds.  $B$ is redundant in the determinant.  Partial FDs are the
+          target of 2NF.
+    \item \textbf{Transitive FD:} $A \to B$ and $B \to C$ implies
+          $A \to C$ transitively.  The attribute $C$ does not depend
+          \emph{directly} on $A$.  Transitive FDs are the target of 3NF.
+    \item \textbf{Multivalued FD:} $A \twoheadrightarrow B$ --- knowing $A$
+          determines an entire \emph{set} of $B$ values, independently of other
+          attributes.  Multivalued FDs are the target of 4NF.
+  \end{itemize}
+\end{frame}

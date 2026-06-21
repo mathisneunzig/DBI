@@ -1,0 +1,98 @@
+% ----------------------------------------------------------
+\begin{frame}[fragile]{ORDER BY}
+  \begin{block}{Sorting Query Results}
+\begin{lstlisting}[style=sqlstyle]
+-- Ascending (default)
+SELECT * FROM product ORDER BY price;
+SELECT * FROM product ORDER BY price ASC;
+
+-- Descending
+SELECT * FROM product ORDER BY price DESC;
+
+-- Multiple columns: primary then secondary sort
+SELECT * FROM product ORDER BY brand_id, price DESC;
+\end{lstlisting}
+  \end{block}
+
+  \begin{itemize}
+    \item Without \texttt{ORDER BY}, the row order is \textbf{undefined} --
+          the database is free to return rows in any order, and this can
+          vary between executions.
+    \item Multiple columns: rows are first sorted by the first column; ties
+          are broken by the second column, and so on.  Each column can
+          independently be \texttt{ASC} or \texttt{DESC}.
+    \item \texttt{ORDER BY} is evaluated \textbf{after} \texttt{WHERE} and
+          \texttt{GROUP BY} in the execution order.
+    \item \texttt{NULL} values sort to the \emph{end} in MySQL by default
+          (\texttt{ASC}); other DBMSs (e.g.\ PostgreSQL) sort \texttt{NULL}
+          first by default.
+  \end{itemize}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{GROUP BY and HAVING}
+  \begin{block}{Grouping and Filtering Groups}
+\begin{lstlisting}[style=sqlstyle]
+-- Average price per brand
+SELECT brand_id, AVG(price) AS avg_price
+FROM product
+GROUP BY brand_id;
+
+-- Only brands with more than 10 products
+SELECT brand_id, AVG(price), COUNT(*) AS product_count
+FROM product
+GROUP BY brand_id
+HAVING COUNT(*) > 10;
+
+-- Combining WHERE and HAVING
+SELECT brand_id, AVG(price)
+FROM product
+WHERE price > 0
+GROUP BY brand_id
+HAVING AVG(price) > 5;
+\end{lstlisting}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{GROUP BY} \textbf{collapses} all rows with the same group
+          value into a single output row.
+    \item Every column in \texttt{SELECT} must either appear in
+          \texttt{GROUP BY} or be wrapped in an aggregate function.
+    \item \texttt{WHERE} filters rows \textbf{before} grouping;
+          \texttt{HAVING} filters groups \textbf{after} grouping.
+  \end{itemize}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{CASE WHEN \textbf{(!)}}
+  \begin{block}{Conditional Expressions in SELECT}
+\begin{lstlisting}[style=sqlstyle]
+SELECT name, price,
+  CASE
+    WHEN price > 10 THEN 'Expensive'
+    WHEN price >= 5 THEN 'Medium'
+    ELSE 'Cheap'
+  END AS price_category
+FROM product;
+\end{lstlisting}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{CASE WHEN} acts like an \textbf{if-else expression}
+          inside a query -- it returns different values depending on which
+          condition is met.
+    \item Conditions are evaluated \textbf{in order}; the first matching
+          \texttt{WHEN} branch is returned and the rest are skipped.
+    \item If no condition matches and there is no \texttt{ELSE},
+          \texttt{NULL} is returned.
+    \item \texttt{CASE WHEN} can appear in \texttt{SELECT},
+          \texttt{ORDER BY}, and even inside aggregate functions
+          (e.g.\ \texttt{SUM(CASE WHEN \ldots THEN 1 ELSE 0 END)}).
+  \end{itemize}
+
+  \begin{examples}{Use Case: Conditional Aggregation}
+    \texttt{SUM(CASE WHEN country = 'DE' THEN 1 ELSE 0 END)} counts only
+    German brands without a subquery -- a powerful pattern for pivot-style
+    reports.
+  \end{examples}
+\end{frame}

@@ -1,0 +1,106 @@
+% ---------------------------------------------------------------------------
+\begin{frame}{First Normal Form (1NF)}
+  \begin{block}{Definition}
+    A relation is in \textbf{1NF} if every attribute contains only
+    \textbf{atomic} (indivisible) values, and every entry in a column is of the
+    same data type.  There are no repeating groups and no multi-valued
+    attributes.
+  \end{block}
+
+  \begin{columns}[t]
+    \begin{column}{0.48\textwidth}
+      \textbf{What Violates 1NF?}
+      \begin{itemize}
+        \item A \texttt{Songs} column containing\\
+              \texttt{"Would've\ldots; Karma"} (two values in one cell).
+        \item A column containing arrays, sets, or comma-separated lists.
+        \item Repeating groups (e.g.\ \texttt{Phone1}, \texttt{Phone2},
+              \texttt{Phone3} columns).
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \textbf{How to Fix It}
+      \begin{itemize}
+        \item Give each atomic value its own row.
+        \item After the fix: one row per (Album, Song) pair.
+        \item The primary key becomes composite: (\texttt{AlbumID},
+              \texttt{Song}).
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \vspace{6pt}
+  \begin{alertblock}{Side Effect}
+    Applying 1NF typically makes the table \emph{longer} (more rows), but each
+    row now represents exactly one atomic fact.  Redundancy may increase
+    temporarily --- this is addressed by 2NF and 3NF.
+  \end{alertblock}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{1NF -- Example}
+  \textbf{Before (NOT in 1NF):}
+  \vspace{4pt}
+
+  \small
+  \begin{tabular}{llll}
+    \hline
+    \textbf{AlbumID} & \textbf{Songs} & \textbf{Main Artist} & \textbf{\ldots} \\
+    \hline
+    A100 & Song1; Song2 & Taylor Swift & \ldots \\
+    \hline
+  \end{tabular}
+
+  \vspace{10pt}
+  \textbf{After (1NF --- one song per row):}
+  \vspace{4pt}
+
+  \begin{tabular}{lllll}
+    \hline
+    \textbf{AlbumID} & \textbf{Song} & \textbf{Featured Artist} & \textbf{Main Artist} & \textbf{\ldots} \\
+    \hline
+    A100 & Would've, Could've, Should've & ---          & Taylor Swift & \ldots \\
+    A100 & Karma                         & Ice Spice    & Taylor Swift & \ldots \\
+    A101 & Snow on the Beach             & Lana Del Rey & Taylor Swift & \ldots \\
+    \hline
+  \end{tabular}
+  \normalsize
+
+  \vspace{8pt}
+  \begin{alertblock}{Still a Problem}
+    Each row is now atomic --- \textbf{1NF satisfied}.  However, \texttt{Main
+    Artist}, \texttt{Debut}, \texttt{Genre}, and \texttt{Release} repeat for
+    every song of the same album.  This redundancy is addressed by \textbf{2NF}.
+  \end{alertblock}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{Second Normal Form (2NF)}
+  \begin{block}{Definition}
+    A relation is in \textbf{2NF} if it is in 1NF and every non-prime attribute
+    is \textbf{fully functionally dependent} on the \emph{entire} primary key
+    (i.e.\ there are no partial dependencies).
+  \end{block}
+
+  \begin{itemize}
+    \item \textbf{Partial dependency:} A non-key attribute depends on only
+          \emph{part} of a composite primary key.
+    \item After 1NF our primary key is \texttt{(AlbumID, Song)}.  But
+          \texttt{Title}, \texttt{MainArtist}, \texttt{Genre}, and
+          \texttt{Release} all depend \emph{only} on \texttt{AlbumID} (not on
+          \texttt{Song}) --- a partial dependency!
+    \item \textbf{Fix:} Split into two tables:
+          \begin{itemize}
+            \item \texttt{Albums(\underline{AlbumID}, Title, MainArtistID, Genre, Release)}
+            \item \texttt{Songs(\underline{AlbumID, Song}, FeaturedArtist)}
+          \end{itemize}
+    \item Now every non-prime attribute depends on the \emph{whole} key of its
+          respective table.
+  \end{itemize}
+
+  \begin{alertblock}{Important Insight}
+    2NF problems can \emph{only} arise when the primary key is
+    \textbf{composite}.  If the PK is a single attribute, the relation is
+    automatically in 2NF (assuming it is already in 1NF).
+  \end{alertblock}
+\end{frame}

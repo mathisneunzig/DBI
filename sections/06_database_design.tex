@@ -1,0 +1,390 @@
+% ============================================================
+%  Section 7: Database Design
+% ============================================================
+\section{Database Design}
+
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{The Big Picture}
+
+  \begin{block}{Database Design Is an Iterative Process}
+    From a vague idea to a running database, every project passes through the same chain of refinements:
+
+    \vspace{0.4em}
+    \begin{center}
+      \small
+      Requirements
+      $\;\to\;$ User Story Map / Feature Spec
+      $\;\to\;$ Concept Draft
+      $\;\to\;$ \textbf{ERM}
+      $\;\to\;$ Implementation Draft
+      $\;\to\;$ \textbf{Relational Schema}
+      $\;\to\;$ Physical Design
+      $\;\to\;$ \textbf{Database Implementation}
+    \end{center}
+  \end{block}
+
+  \begin{block}{Key Principles}
+    \begin{itemize}
+      \item Each step \textbf{refines} the previous one -- no step is skipped in a professional project
+      \item Mistakes made early (in requirements) are the \textbf{most expensive} to fix later
+      \item A well-designed schema prevents the majority of data integrity problems and performance issues before a single line of application code is written
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{Recommended Design Tools}
+    \textbf{diagrams.net} (free, browser-based, formerly draw.io) \quad|\quad
+    \textbf{MySQL Workbench} \quad|\quad
+    \textbf{Lucidchart}
+  \end{examples}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{Requirements Engineering (!)}
+
+  \begin{alertblock}{Why Requirements Engineering Is Critical}
+    \textbf{60\,\% of all errors} in software projects originate during requirements engineering.\\[0.3em]
+    The cost to fix a defect grows dramatically the later it is discovered:
+    \begin{itemize}
+      \item Caught during \textit{requirements gathering}: baseline cost $= 1\times$
+      \item Caught during \textit{implementation}: $\approx 20\times$ more expensive
+      \item Caught during \textit{production rollout}: $\approx 100\times$ more expensive
+    \end{itemize}
+  \end{alertblock}
+
+  \begin{block}{Four Phases of Requirements Engineering}
+    \begin{enumerate}
+      \item \textbf{Identification} -- gather requirements through interviews, surveys, focus groups, observation, and prototyping; involve all stakeholders early
+      \item \textbf{Documentation} -- categorise as functional / non-functional / quality / constraints; use models (ERM, User Story Maps); prioritise ruthlessly
+      \item \textbf{Validation} -- verify each requirement after implementation; monitor continuously; detect contradictions before they become bugs
+      \item \textbf{Management} -- communicate changes to all stakeholders; create, revise, and retire requirements in a controlled way; document every change decision
+    \end{enumerate}
+  \end{block}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{Extracting Entities from Requirements}
+
+  \begin{block}{Natural Language $\to$ ERM Elements}
+    Real requirements arrive as text. A systematic reading strategy maps language constructs to ERM components.
+  \end{block}
+
+  \begin{examples}{Example Requirement Text}
+    \begin{itemize}
+      \item \textit{``Every car has an owner.''}
+      \item \textit{``Every person can have multiple cars.''}
+      \item \textit{``A car has a licence plate number, which is registered at one registration authority.''}
+    \end{itemize}
+  \end{examples}
+
+  \begin{block}{Reading Strategy}
+    \begin{itemize}
+      \item \textbf{Nouns} $\;\to\;$ candidates for \textbf{entities} or \textbf{attributes}:\\
+            \textit{car}, \textit{owner / person}, \textit{licence plate number}, \textit{registration authority}
+      \item \textbf{Verbs / prepositions} $\;\to\;$ candidates for \textbf{relationships}:\\
+            ``\textit{has}'' (person $\to$ car) \quad ``\textit{registered at}'' (licence plate $\to$ registration authority)
+      \item \textbf{Cardinality clues} $\;\to\;$ determine \textbf{min/max participation}:\\
+            ``\textit{every person can have \textbf{multiple} cars}'' $\;\Rightarrow\;$ \textbf{1:n} (person to car)\\
+            ``\textit{registered at \textbf{one} registration authority}'' $\;\Rightarrow\;$ each licence plate has exactly one authority
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{Entity-Relationship Model (ERM)}
+
+  \begin{block}{Background}
+    The ERM was introduced in \textbf{1976 by Peter Chen} (Chen's notation). It is a \textbf{conceptual model} for representing data requirements visually, \textit{before} any implementation decision is made. It is DBMS-agnostic and does not prescribe a normalisation form.
+  \end{block}
+
+  \begin{block}{Core Components}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{@{}lp{7.5cm}@{}}
+      \textbf{Entity}       & An identifiable, distinguishable real-world object (Person, Product, Order) \\
+      \textbf{Attribute}    & A descriptive property of an entity (Name, Price, Date) \\
+      \textbf{Relationship} & A meaningful link between two or more entities (Person DRIVES Car) \\
+      \textbf{Weak Entity}  & Exists only in relation to a \textit{strong} entity and cannot be uniquely identified without it (e.g.\ Contract of an Employee) \\
+      \textbf{Subtype}      & A specialisation of a supertype that inherits its attributes (Employee is a subtype of Person) \\
+      \textbf{Supertype}    & A generalised entity from which subtypes derive (Person is a supertype of Employee, Customer) \\
+    \end{tabular}
+  \end{block}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{ERM Notation (Chen's)}
+
+  \begin{block}{Shape Dictionary}
+    \begin{itemize}
+      \item \textbf{Rectangle} \quad$\Rightarrow$\quad Entity
+      \item \textbf{Diamond} \quad$\Rightarrow$\quad Relationship
+      \item \textbf{Ellipse} \quad$\Rightarrow$\quad Attribute
+      \item \textbf{Double rectangle} \quad$\Rightarrow$\quad Weak entity
+      \item \textbf{Double diamond} \quad$\Rightarrow$\quad Identifying relationship (connects weak entity to its owner)
+      \item \textbf{Underlined text} \quad$\Rightarrow$\quad Primary key attribute
+      \item \textbf{Double ellipse} \quad$\Rightarrow$\quad Multivalued attribute (e.g.\ a person can have multiple phone numbers)
+      \item \textbf{Dashed ellipse} \quad$\Rightarrow$\quad Derived attribute (computed from other attributes, e.g.\ Age from Birthday)
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Reading a Chen Diagram}
+    Entities are connected by labelled relationship diamonds. Cardinality annotations (1, n, m) are placed on the connecting lines between the relationship diamond and each entity. Always read the diagram as a sentence: \textit{``Entity A [relationship] Entity B''}.
+  \end{block}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{Cardinalities in Chen's Notation}
+
+  \begin{block}{Definition}
+    A \textbf{cardinality} defines how many instances of one entity can be associated with how many instances of another entity through a given relationship.
+  \end{block}
+
+  \begin{block}{The Three Basic Cardinalities}
+    \renewcommand{\arraystretch}{1.4}
+    \begin{tabular}{@{}lp{8cm}@{}}
+      \toprule
+      \textbf{Notation} & \textbf{Meaning} \\
+      \midrule
+      \textbf{1:1} & Each instance of A is related to at most one instance of B, and vice versa \\
+      \textbf{1:n} & Each instance of A can be related to many instances of B; each instance of B is related to at most one A \\
+      \textbf{m:n} & Each instance of A can be related to many instances of B, and each instance of B can be related to many instances of A \\
+      \bottomrule
+    \end{tabular}
+  \end{block}
+
+  \begin{examples}{Concrete Example}
+    \textbf{Person 1:n Car} \quad -- one person can own many cars; each car has exactly one owner.\\
+    \textbf{Student m:n Course} \quad -- a student attends many courses; a course is attended by many students.
+  \end{examples}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{Modified Chen's Notation (1\,=\,1,\; c\,=\,can,\; m\,=\,must)}
+
+  \begin{block}{Extended Cardinality Symbols}
+    The basic 1:1\,/\,1:n\,/\,m:n notation does not capture optional participation. The \textbf{modified notation} adds two symbols:\\[0.3em]
+    \texttt{c} = ``can'' (0 or more / 0 or 1) \quad -- participation is \textit{optional}\\
+    \texttt{m} = ``must'' (at least 1) \quad\qquad\quad -- participation is \textit{mandatory}
+  \end{block}
+
+  \begin{block}{Symbol Table}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{@{}ll@{}}
+      \toprule
+      \textbf{Symbol} & \textbf{Meaning} \\
+      \midrule
+      \texttt{1:1}   & exactly 1 to exactly 1 \\
+      \texttt{1:c}   & exactly 1 to 0 or 1 \\
+      \texttt{1:m}   & exactly 1 to at least 1 \\
+      \texttt{1:mc}  & exactly 1 to 0 or more \\
+      \texttt{c:c}   & 0 or 1 to 0 or 1 \quad $(\to$ maps to basic \texttt{1:1}) \\
+      \texttt{c:mc}  & 0 or 1 to 0 or more \quad $(\to$ maps to basic \texttt{1:n}) \\
+      \texttt{mc:mc} & 0 or more to 0 or more \quad $(\to$ maps to basic \texttt{m:n}) \\
+      \texttt{m:mc}  & at least 1 to 0 or more \\
+      \bottomrule
+    \end{tabular}
+  \end{block}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{Crow's Foot Notation}
+
+  \begin{block}{What Is Crow's Foot?}
+    Crow's Foot notation is an alternative ERM notation widely used in professional database tools such as \textbf{MySQL Workbench}, \textbf{ERwin}, and \textbf{draw.io}. It is more compact than Chen's notation for large, complex schemas.
+  \end{block}
+
+  \begin{block}{Symbol Vocabulary}
+    \begin{itemize}
+      \item $|$ \quad exactly one (mandatory, singular)
+      \item $||$ \quad one and only one
+      \item $\circ$ \quad zero or one (optional)
+      \item $<$ (crow's foot) \quad many
+    \end{itemize}
+    Symbols are always placed at the end of the line \textit{closest to the entity they modify}.
+  \end{block}
+
+  \begin{block}{Common Combinations}
+    \begin{itemize}
+      \item $|\!<$ \quad one-to-many (mandatory on one side)
+      \item $\circ\!<$ \quad zero-or-one-to-many
+      \item $\circ|\;\;|\!<$ \quad zero-or-one to one-or-many
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{Tip}
+    When \textbf{reading} a Crow's Foot diagram, always identify the symbol nearest to each entity and translate it into English: ``each [Entity A] \textit{has} [symbol] [Entity B]''.
+  \end{examples}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{Extended ERM (EERM)}
+
+  \begin{block}{What Does the EERM Add?}
+    The \textbf{Extended Entity-Relationship Model} enriches the original ERM with object-oriented concepts, primarily to model \textbf{inheritance hierarchies} and \textbf{self-referencing structures}.
+  \end{block}
+
+  \begin{block}{Core Concepts}
+    \begin{itemize}
+      \item \textbf{Generalisation} (bottom-up): abstract a common supertype from multiple specific subtypes.\\
+            \textit{Example: Employee and Customer $\to$ generalised to Person}
+      \item \textbf{Specialisation} (top-down): derive specific subtypes from a general supertype.\\
+            \textit{Example: Person $\to$ specialised into FullTimeEmployee and PartTimeEmployee}
+      \item \textbf{Attribute redefinition (!):} a subtype may redefine (override) inherited attributes with a more specific type or constraint
+      \item \textbf{Recursive relationships (!):} an entity relates to itself.\\
+            \textit{Example: Employee ``manages'' Employee (manager-subordinate hierarchy)}
+    \end{itemize}
+  \end{block}
+
+  \begin{alertblock}{Inheritance Rule}
+    Every subtype \textbf{inherits all attributes and relationships} of its supertype and may add its own specific attributes on top. This eliminates redundancy in the model.
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{Exercise: ERM}
+
+  \begin{block}{Task}
+    Transfer the following verbal descriptions into a complete \textbf{ERM diagram} using Chen's (or Crow's Foot) notation. Add realistic attributes to all entities. Annotate cardinalities for every relationship.
+  \end{block}
+
+  \begin{block}{Exercise Levels}
+    \begin{itemize}
+      \item \textbf{Simple:} Exercise\,6A
+      \item \textbf{Intermediate:} Exercise\,6B
+      \item \textbf{Advanced:} Exercise\,6C
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{Tool \& Time}
+    Use \textbf{diagrams.net} (\texttt{app.diagrams.net}) as your diagramming tool -- it is free, runs in the browser, and exports to PDF or XML.\\[0.3em]
+    \textbf{Time: 30 minutes.}
+  \end{examples}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{Exercise: EERM}
+
+  \begin{block}{Task}
+    Transfer the following verbal descriptions into a complete \textbf{EERM diagram}. Your model must include at least one \textbf{generalisation or specialisation} hierarchy. Annotate all cardinalities and mark inherited attributes.
+  \end{block}
+
+  \begin{block}{Exercise Levels}
+    \begin{itemize}
+      \item \textbf{Simple:} Exercise\,7A
+      \item \textbf{Intermediate:} Exercise\,7B
+      \item \textbf{Advanced:} Exercise\,7C
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{Tool \& Time}
+    Use \textbf{diagrams.net} (\texttt{app.diagrams.net}).\\[0.3em]
+    \textbf{Time: 30 minutes.}
+  \end{examples}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{Implementation Draft -- Rules}
+
+  \begin{block}{From ERM to Relational Schema}
+    Converting an ERM\,/\,EERM into a set of relations follows a fixed set of mapping rules. Apply them in order:
+  \end{block}
+
+  \begin{block}{Mapping Rules}
+    \begin{enumerate}
+      \item Every \textbf{strong entity} becomes its own relation with a \textbf{primary key}
+      \item Every \textbf{weak entity} becomes its own relation; its PK is a \textbf{composite key} that includes the PK of its owning (strong) entity
+      \item Every \textbf{many-to-many (m:n) relationship} becomes its own \textbf{junction relation} containing both foreign keys (and any relationship attributes)
+      \item \textbf{One-to-many (1:n)} relationships: add a \textbf{foreign key on the ``many'' side}; no separate relation is needed
+      \item \textbf{One-to-one (1:1)} relationships: add a foreign key on \textit{either} side (prefer the optional participant); no separate relation is needed
+      \item \textbf{Multivalued attributes} become their own relation with a foreign key back to the originating entity
+    \end{enumerate}
+  \end{block}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{Implementation Draft -- Example}
+
+  \begin{block}{Starting ERM}
+    \textbf{Author}(\textit{Name, Birthday}) \quad\texttt{--[writes]-->}\quad \textbf{Book}(\textit{Barcode, PageCount, ChapterID})\\[0.3em]
+    Cardinality of \textit{writes}: \textbf{m:n} (one author can write many books; one book can have many authors)
+  \end{block}
+
+  \begin{block}{Resulting Relational Schema}
+    \begin{itemize}
+      \item \textbf{Author}(\underline{AuthorID}, Name, Birthday)
+      \item \textbf{Book}(\underline{Barcode}, PageCount, ChapterID)
+      \item \textbf{Author\_Book}(\underline{AuthorID}, \underline{Barcode}) \quad\textit{-- junction table for the m:n relationship}
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{Rules Applied}
+    \begin{itemize}
+      \item Rule 1: Author and Book are strong entities $\to$ each gets its own relation with a surrogate PK
+      \item Rule 3: \textit{writes} is m:n $\to$ becomes the Author\_Book junction table, with FKs to both Author and Book
+    \end{itemize}
+  \end{examples}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{From Schema to SQL}
+
+  \begin{block}{The Final Step: Physical Implementation}
+    Once the implementation draft (relational schema) is complete, \textbf{SQL DDL statements} are written to create the physical database objects.
+  \end{block}
+
+  \begin{block}{DDL Elements Used}
+    \begin{itemize}
+      \item \texttt{CREATE TABLE} -- one statement per relation in the schema
+      \item \texttt{PRIMARY KEY} -- enforces entity integrity; each row is uniquely identifiable
+      \item \texttt{FOREIGN KEY \ldots REFERENCES} -- enforces referential integrity between tables
+      \item \texttt{NOT NULL} -- ensures mandatory attributes are always populated
+      \item \texttt{UNIQUE} -- enforces candidate key constraints beyond the PK
+      \item \texttt{CHECK} -- enforces domain constraints (e.g.\ \texttt{age > 0})
+    \end{itemize}
+  \end{block}
+
+  \begin{alertblock}{Coming Up}
+    SQL -- both DDL (schema creation) and DML (data manipulation: \texttt{SELECT}, \texttt{INSERT}, \texttt{UPDATE}, \texttt{DELETE}) -- is covered in detail in the next section.
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{Exercise: EERM \& Relational Schema}
+
+  \begin{block}{Task}
+    Transfer the verbal descriptions into a complete \textbf{EERM diagram} \textit{and} derive the corresponding \textbf{relational schema} from it. Apply all mapping rules systematically.
+  \end{block}
+
+  \begin{block}{Exercise Levels}
+    \begin{itemize}
+      \item \textbf{Simple:} Exercise\,8A
+      \item \textbf{Intermediate:} Exercise\,8B
+      \item \textbf{Advanced:} Exercise\,8C
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Deliverables}
+    \begin{enumerate}
+      \item EERM diagram in \textbf{diagrams.net}
+      \item Written relational schema using standard notation:\\
+            \texttt{RelationName(\underline{PK}, attr1, attr2, \textit{FK})}
+    \end{enumerate}
+  \end{block}
+
+  \begin{examples}{Time}
+    \textbf{40 minutes.}
+  \end{examples}
+\end{frame}

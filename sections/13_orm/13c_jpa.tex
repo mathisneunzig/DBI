@@ -1,0 +1,34 @@
+\begin{frame}[fragile]{Jakarta Persistence API (JPA)}
+  \begin{block}{JPA -- formerly Java Persistence API}
+    The \textbf{standard Java/Jakarta EE specification} for ORM. JPA defines the annotations and
+    programming model; \textbf{Hibernate} is by far the most popular implementation. Using JPA
+    keeps your code vendor-neutral -- you could switch from Hibernate to EclipseLink with minimal
+    changes.
+  \end{block}
+
+  \begin{lstlisting}[style=sqlstyle, language=Java]
+@Entity
+@Table(name = "employee")
+public class Employee {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "first_name", nullable = false)
+    private String firstName;
+
+    @ManyToOne
+    @JoinColumn(name = "department_id")
+    private Department department;
+}
+  \end{lstlisting}
+
+  \begin{itemize}
+    \item \texttt{@Entity} -- this class maps to a database table.
+    \item \texttt{@Id} + \texttt{@GeneratedValue} -- auto-incrementing primary key.
+    \item \texttt{@Column} -- maps the field to a specific column with constraints.
+    \item \texttt{@ManyToOne} + \texttt{@JoinColumn} -- defines a foreign key relationship;
+          JPA generates the correct \texttt{JOIN} automatically when the department is accessed.
+  \end{itemize}
+\end{frame}

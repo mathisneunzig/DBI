@@ -1,0 +1,280 @@
+\section{Backup and Recovery}
+
+\begin{frame}{Why Backup and Recovery?}
+  Data is one of the most valuable assets of any organisation. Hardware can be replaced in hours;
+  data that is lost without a backup may be lost forever. Even a brief period of data unavailability
+  can cause significant financial and reputational damage.
+
+  \medskip
+  Every production database system \textbf{must} have a well-defined backup and recovery strategy
+  before going live -- not after the first incident.
+
+  \medskip
+  \begin{block}{Two key metrics for every recovery strategy}
+    \begin{itemize}
+      \item \textbf{RTO -- Recovery Time Objective}: the maximum acceptable duration of system
+            downtime after a failure. ``How long can we afford to be offline?''
+      \item \textbf{RPO -- Recovery Point Objective}: the maximum acceptable amount of data loss
+            measured in time. ``How much data can we afford to lose?''
+    \end{itemize}
+  \end{block}
+
+  \medskip
+  Example: an online bank might have an RTO of 1 hour and an RPO of 0 minutes (no data loss
+  permitted). A small internal tool might tolerate an RTO of 1 day and an RPO of 24 hours.
+  Your backup strategy must be designed to meet these targets.
+\end{frame}
+
+\begin{frame}{Backups}
+  \begin{block}{Definition}
+    A \textbf{backup} is a copy of database data saved at a specific point in time. It is used to
+    restore the database after data loss, corruption, accidental deletion, or hardware failure.
+  \end{block}
+
+  \medskip
+  \textbf{Common backup strategies -- from coarsest to finest granularity:}
+
+  \begin{itemize}
+    \item \textbf{Full backup (e.g.\ weekly)}: a complete copy of the entire database. Reliable and
+          self-contained -- restore from this alone is possible. Downside: slow to create and
+          requires the most storage.
+    \item \textbf{Differential backup (e.g.\ daily)}: copies only the data that has changed since
+          the \emph{last full backup}. Faster and smaller than a full backup; restore requires the
+          last full backup plus the most recent differential.
+    \item \textbf{Incremental backup (e.g.\ hourly)}: copies only data changed since the
+          \emph{last backup of any type}. Smallest and fastest; restore requires the full backup,
+          every differential, and every incremental in sequence.
+    \item \textbf{Transaction log backup}: saves a continuous log of every individual change. Enables
+          \textbf{point-in-time recovery} -- restore to any moment, not just the last backup time.
+  \end{itemize}
+
+  \medskip
+  \begin{examples}{Typical strategy in practice}
+    Full backup on Sunday night + differential every other night + log backup every hour.
+  \end{examples}
+\end{frame}
+
+\begin{frame}{Recovery}
+  \begin{block}{Definition}
+    \textbf{Recovery} is the process of restoring a database to a correct, consistent, and usable
+    state after any type of failure.
+  \end{block}
+
+  \medskip
+  \textbf{Common failure scenarios:}
+
+  \begin{itemize}
+    \item \textbf{Software issues}: application bugs that corrupt data, a transaction that completes
+          partially before crashing, or a developer running \texttt{DELETE FROM orders} without a
+          \texttt{WHERE} clause.
+    \item \textbf{Hardware issues}: sudden power outage, disk head crash, server room fire or flood,
+          failed storage controller.
+    \item \textbf{Human error}: accidental \texttt{DROP TABLE}, updating the wrong rows, importing
+          bad data that overwrites good data.
+  \end{itemize}
+
+  \medskip
+  \textbf{Standard recovery process (3 steps):}
+  \begin{enumerate}
+    \item Restore the most recent \textbf{full backup} to get a consistent baseline.
+    \item Apply the most recent \textbf{differential backup} to bring data closer to the failure
+          point.
+    \item Replay all \textbf{transaction log backups} in chronological order up to the desired
+          recovery point in time.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Transaction Logs: Before- and After-Images}
+  To support both rollback and crash recovery, every database engine maintains detailed change logs
+  for every transaction.
+
+  \medskip
+  \begin{block}{Before-Image}
+    The state of a data record \textbf{before} the modification. Created at the start of a
+    transaction (before any change is applied). Used for \texttt{ROLLBACK} -- if the transaction
+    must be undone, the before-image is used to restore the original data.
+    Kept in the log until the transaction either commits or rolls back.
+  \end{block}
+
+  \begin{block}{After-Image}
+    The state of a data record \textbf{after} the modification. Created when the change is applied
+    to the in-memory cache. Used for \textbf{REDO} / crash recovery -- if the system crashes after
+    a commit but before the data was flushed to disk, the after-image allows the change to be
+    replayed. Kept until the data has been physically written to disk (at a \emph{checkpoint}).
+  \end{block}
+
+  \medskip
+  \textbf{Important:} data modifications are first written to a \textbf{database cache} (RAM buffer)
+  for performance. They are written to physical disk asynchronously during a \emph{checkpoint}.
+  If the system crashes between the commit and the next checkpoint, the transaction log (after-image)
+  is used to redo the committed work.
+\end{frame}
+
+\begin{frame}{Transaction Lifecycle with Before- and After-Images}
+  Concrete example: a transaction updates the price of ``Cat Milk'' from \EUR{1.99} to \EUR{2.49}.
+
+  \medskip
+  \begin{enumerate}
+    \item \textbf{START TRANSACTION}: the DBMS begins tracking this transaction.
+    \item \textbf{Create Before-Image}: the current record (price = 1.99) is written to the
+          transaction log as the before-image.
+    \item \textbf{Modify data in cache}: the price is updated to 2.49 in the in-memory buffer.
+          The physical disk file is \emph{not yet changed}.
+    \item \textbf{Create After-Image}: the updated record (price = 2.49) is written to the
+          transaction log as the after-image.
+    \item \textbf{COMMIT or ROLLBACK}:
+      \begin{itemize}
+        \item \textbf{COMMIT}: the change is confirmed. The before-image is deleted from the log.
+              The after-image remains until the buffer is flushed to disk at the next checkpoint,
+              then it too is deleted.
+        \item \textbf{ROLLBACK}: the before-image is used to restore the record to price = 1.99.
+              Both before- and after-image are discarded.
+      \end{itemize}
+  \end{enumerate}
+
+  \medskip
+  \begin{block}{Why this matters}
+    This mechanism directly implements two ACID properties: \textbf{Atomicity} (all-or-nothing via
+    rollback) and \textbf{Durability} (committed changes survive crashes via redo from the log).
+  \end{block}
+\end{frame}
+
+\begin{frame}{RAID -- Redundant Array of Independent Disks (!)}
+  \begin{block}{Definition (!)}
+    \textbf{RAID} combines multiple physical hard drives into a single logical storage unit, providing
+    a combination of improved performance (through parallelism) and/or fault tolerance (through
+    redundancy), depending on the RAID level chosen.
+  \end{block}
+
+  \begin{itemize}
+    \item Can be implemented in \textbf{hardware} (dedicated RAID controller card with its own CPU
+          and cache) or in \textbf{software} (the operating system manages RAID in firmware or kernel
+          drivers). Hardware RAID is faster and more reliable.
+    \item \textbf{Three fundamental techniques} used in different combinations by each RAID level:
+      \begin{itemize}
+        \item \textbf{Striping}: data is split into blocks and written across multiple disks in
+              parallel. Increases throughput -- both reading and writing happen simultaneously on
+              several disks.
+        \item \textbf{Mirroring}: an exact, real-time copy of all data is maintained on a second
+              (or more) disk. If one disk fails, the mirror takes over immediately.
+        \item \textbf{Parity}: a mathematical checksum of the data is stored alongside it. If one
+              disk fails, its content can be \emph{reconstructed} from the remaining data and the
+              parity information -- without needing a full mirror copy.
+      \end{itemize}
+    \item There is always a \textbf{trade-off} between performance, redundancy, and storage
+          efficiency. No RAID level maximises all three simultaneously.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{RAID 0 -- Striping (!)}
+  \begin{columns}
+    \begin{column}{0.65\textwidth}
+      \textbf{How it works:} data is split into equal-sized blocks (\emph{stripes}) and written
+      across all disks in round-robin order.
+
+      \medskip
+      Example with 2 disks: Disk\,0 receives blocks A1, A2, A3, A4; Disk\,1 receives A5, A6, A7,
+      A8. Both disks are written simultaneously.
+
+      \medskip
+      \textbf{Pros:}
+      \begin{itemize}
+        \item \textbf{Fastest read and write performance} of all RAID levels (full parallelism).
+        \item \textbf{100\% storage efficiency} -- no space wasted on redundancy.
+      \end{itemize}
+
+      \textbf{Cons:}
+      \begin{itemize}
+        \item \textbf{Zero fault tolerance}: if even \emph{one} disk fails, all data is lost
+              (stripes from the failed disk are missing and cannot be reconstructed).
+        \item RAID 0 is technically \emph{not} redundant despite being called RAID.
+      \end{itemize}
+
+      \begin{alertblock}{Use case (!)}
+        Temporary scratch storage, video editing caches, or any scenario where speed matters and
+        data loss is acceptable. Never use for production databases.
+      \end{alertblock}
+    \end{column}
+    \begin{column}{0.3\textwidth}
+      \centering
+      \textbf{Disk 0} \quad \textbf{Disk 1}\\[4pt]
+      A1 \quad A5\\
+      A2 \quad A6\\
+      A3 \quad A7\\
+      A4 \quad A8\\
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{RAID 1 -- Mirroring (!)}
+  \begin{columns}
+    \begin{column}{0.65\textwidth}
+      \textbf{How it works:} every write operation is duplicated to two (or more) disks
+      simultaneously. Disk\,0 and Disk\,1 are always byte-for-byte identical.
+
+      \medskip
+      Example with 2 disks: Disk\,0 = A1, A2, A3, A4 and Disk\,1 = A1, A2, A3, A4.
+
+      \medskip
+      \textbf{Pros:}
+      \begin{itemize}
+        \item \textbf{Full redundancy}: if one disk fails, the mirror takes over instantly with no
+              data loss and no rebuild time.
+        \item \textbf{Fast reads}: the controller can serve read requests from either disk in
+              parallel, doubling read throughput.
+      \end{itemize}
+
+      \textbf{Cons:}
+      \begin{itemize}
+        \item \textbf{50\% storage efficiency}: you pay for two disks but only get the capacity of
+              one.
+        \item Most expensive per usable gigabyte of all RAID levels.
+      \end{itemize}
+
+      \begin{examples}{Use case (!)}
+        Database servers, operating system drives, any storage where uptime and data availability
+        are the top priority.
+      \end{examples}
+    \end{column}
+    \begin{column}{0.3\textwidth}
+      \centering
+      \textbf{Disk 0} \quad \textbf{Disk 1}\\[4pt]
+      A1 \quad A1\\
+      A2 \quad A2\\
+      A3 \quad A3\\
+      A4 \quad A4\\
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{RAID 5 -- Striping with Distributed Parity (!)}
+  \textbf{How it works:} data is striped across $n \geq 3$ disks. For each stripe, a \emph{parity
+  block} is computed and stored on one of the disks (the parity location rotates across disks so no
+  single disk becomes the bottleneck).
+
+  \medskip
+  If one disk fails, its data can be \textbf{mathematically reconstructed} from the remaining
+  disks and the parity blocks using XOR operations.
+
+  \medskip
+  \textbf{Pros:}
+  \begin{itemize}
+    \item Good balance of \textbf{performance}, \textbf{storage efficiency}, and
+          \textbf{fault tolerance}.
+    \item Storage efficiency: $\frac{n-1}{n}$ -- with 4 disks, 75\% of total capacity is usable.
+    \item Survives the failure of \textbf{exactly one disk} without data loss.
+  \end{itemize}
+
+  \textbf{Cons:}
+  \begin{itemize}
+    \item \textbf{Slower writes} than RAID 0 or RAID 1 (parity must be computed for every write).
+    \item If \textbf{two disks fail simultaneously}, all data is lost (no second parity).
+    \item After a disk failure, \textbf{rebuild time} can take hours or days on large arrays --
+          during which the remaining disks are under extra stress.
+  \end{itemize}
+
+  \begin{block}{Use case (!)}
+    The most common RAID level in enterprise NAS and SAN storage arrays where a balance of cost,
+    performance, and safety is needed.
+  \end{block}
+\end{frame}

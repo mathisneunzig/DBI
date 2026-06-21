@@ -1,0 +1,71 @@
+% ---------------------------------------------------------------------------
+\begin{frame}{Armstrong Axioms}
+  Named after William W.\ Armstrong (1974).  These inference rules allow us to
+  \emph{derive} all functional dependencies that logically follow from a given
+  set $F$.
+
+  \begin{columns}[t]
+    \begin{column}{0.48\textwidth}
+      \textbf{Original Three Axioms}
+      \begin{enumerate}
+        \item \textbf{Reflexivity:}\\
+              If $B \subseteq A$, then $A \to B$.\\
+              A set always determines its own subsets.
+        \item \textbf{Augmentation:}\\
+              If $A \to B$, then $AC \to BC$.\\
+              Adding the same attribute(s) to both sides preserves the FD.
+        \item \textbf{Transitivity:}\\
+              If $A \to B$ and $B \to C$, then $A \to C$.
+      \end{enumerate}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \textbf{Derived Rules}
+      \begin{enumerate}
+        \setcounter{enumi}{3}
+        \item \textbf{Union:}\\
+              If $A \to B$ and $A \to C$, then $A \to BC$.
+        \item \textbf{Decomposition:}\\
+              If $A \to BC$, then $A \to B$ and $A \to C$.
+        \item \textbf{Pseudotransitivity:}\\
+              If $A \to B$ and $CB \to D$, then $CA \to D$.
+      \end{enumerate}
+    \end{column}
+  \end{columns}
+
+  \vspace{8pt}
+  \begin{alertblock}{Completeness and Soundness}
+    The Armstrong axioms are both \textbf{complete} (every FD that holds can be
+    derived) and \textbf{sound} (every derived FD actually holds).  They form
+    the foundation for all normalisation algorithms.
+  \end{alertblock}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{Keys Revisited}
+  Before studying normal forms in detail, we need precise definitions of
+  \emph{keys}.
+
+  \begin{itemize}
+    \item \textbf{Superkey:} A set $A \subseteq R$ such that $A \to R$
+          (i.e.\ $A$ determines \emph{all} attributes of $R$).  May contain
+          redundant attributes.
+    \item \textbf{Candidate Key:} A \emph{minimal} superkey --- removing any
+          single attribute makes it no longer a superkey.
+          \begin{itemize}
+            \item Every candidate key is a superkey, but not vice versa.
+            \item $A$ is a candidate key if $A \to R$ and no proper subset of
+                  $A$ also determines $R$.
+          \end{itemize}
+    \item \textbf{Primary Key:} The candidate key chosen by the database
+          designer as the principal identifier.
+    \item \textbf{Prime Attribute:} An attribute that is part of \emph{at
+          least one} candidate key.
+    \item \textbf{Non-Prime Attribute:} An attribute that is \emph{not} part of
+          any candidate key.  Non-prime attributes are the focus of most
+          normalisation rules.
+  \end{itemize}
+
+  \begin{block}{Hierarchy}
+    \[ \text{Superkeys} \supset \text{Candidate Keys} \supset \text{Primary Key (exactly one)} \]
+  \end{block}
+\end{frame}

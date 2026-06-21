@@ -1,0 +1,217 @@
+% ----------------------------------------------------------
+\begin{frame}{Join $\bowtie$ — Introduction}
+  A \textbf{join} combines related tuples from two relations based on a
+  shared condition, typically an attribute that exists (conceptually) in
+  both relations.  Joins are by far the most frequently used binary
+  operation in practice because relational databases deliberately split
+  information across multiple tables.
+
+  \begin{block}{Core Idea}
+    \[
+      R_1 \bowtie_C R_2 \;=\; \sigma_C(R_1 \times R_2)
+    \]
+    A join is \emph{syntactic sugar} for a Cartesian Product followed by a
+    Restriction.  The join condition $C$ filters out the combinations that
+    are not meaningful, leaving only the related pairs.
+  \end{block}
+
+  \begin{examples}{Motivating Example}
+    A \texttt{Products} table stores a \texttt{Brand\_ID} foreign key; a
+    \texttt{Brands} table stores \texttt{ID} and \texttt{Name}.  To
+    display product names alongside brand names, the two tables must be
+    joined on \texttt{Products.Brand\_ID = Brands.ID}.
+  \end{examples}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Types of Joins}
+  There are several join variants, each handling
+  \emph{non-matching} tuples differently.  The table below gives an
+  overview; subsequent frames discuss the most important ones in detail.
+
+  \vspace{0.4em}
+  \begin{center}
+    \footnotesize
+    \begin{tabular}{lll}
+      \hline
+      \textbf{Symbol} & \textbf{Name} & \textbf{Description} \\
+      \hline
+      $\bowtie$         & Natural Join       & Join on all attributes with the same name \\
+      $\bowtie_C$       & Inner / Theta Join & Join on specified condition \\
+      $\ltimes$         & Left Semi Join     & Left tuples with a match (left attrs only) \\
+      $\rtimes$         & Right Semi Join    & Right tuples with a match (right attrs only) \\
+      $\bowtie_L$       & Left Outer Join    & All left tuples; NULLs for non-matches \\
+      $\bowtie_R$       & Right Outer Join   & All right tuples; NULLs for non-matches \\
+      $\bowtie_{LR}$    & Full Outer Join    & All tuples from both sides \\
+      $\triangleright$  & Anti Join          & Left tuples with \emph{no} match in right \\
+      \hline
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Natural Join $\bowtie$}
+  The natural join \textbf{automatically} identifies all attributes that
+  share the same name in both relations and joins on the equality of those
+  attributes.  In the result, the shared attribute columns appear only
+  once (duplicates are removed).
+
+  \begin{block}{Key Points}
+    \begin{itemize}
+      \item No explicit join condition needs to be specified — the common
+            attribute names define it implicitly.
+      \item \textbf{Danger:} if two tables coincidentally share an
+            attribute name that should \emph{not} be part of the join
+            condition, the natural join silently produces wrong results.
+            Always check which attributes are shared before using it.
+      \item Syntax: $R_1 \bowtie R_2$
+      \item Can be chained: $A \bowtie (X \bowtie M)$ joins three tables
+            in sequence.
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{Example}
+    Relations $A$ and $X$ both have an attribute called \texttt{ID}.  Then
+    $A \bowtie X$ joins them on $A.\texttt{ID} = X.\texttt{ID}$, and the
+    result contains \texttt{ID} as a single column.
+  \end{examples}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Inner Join / Theta Join $\bowtie_C$}
+  The \textbf{inner join} (equi-join) joins two relations on an
+  \emph{explicitly specified} equality condition.  The more general
+  \textbf{theta join} allows any comparison operator ($=$, $<$, $>$,
+  $\leq$, $\geq$, $\neq$) in the condition.
+
+  \begin{block}{Key Points}
+    \begin{itemize}
+      \item Only tuples that have a \emph{matching counterpart} in the
+            other relation appear in the result.  Non-matching tuples are
+            discarded — this is the defining characteristic of an inner
+            join.
+      \item The result schema contains all attributes from both relations
+            (unlike the natural join, attribute names are not merged).
+      \item Syntax: $R_1 \bowtie_{R_1.A \,=\, R_2.B} R_2$
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{Example}
+    \[
+      \text{Products} \;\bowtie_{\text{Products.Brand\_ID}\;=\;\text{Brands.ID}}\; \text{Brands}
+    \]
+    Returns all products together with their corresponding brand data.
+    Products without a matching brand entry and brands without any product
+    are both excluded from the result.
+  \end{examples}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Combining Operators}
+  The true power of relational algebra lies in \textbf{composing}
+  operators freely.  Because every operator returns a relation, the output
+  of any operation can immediately become the input of another.
+
+  \begin{block}{Reading Strategy}
+    Relational algebra expressions are read \textbf{inside-out}: start
+    from the innermost expression and work outward, applying each
+    successive operator to the result of the previous one.
+  \end{block}
+
+  \begin{examples}{Example: Product Name and Brand Name Only}
+    \begin{align*}
+      \pi_{\text{Products.ID,\;Product\_Name,\;Brand\_Name}}\bigl(
+        &\;\rho_{\text{Product\_Name/Name}}(\text{Products}) \\
+        &\;\bowtie_{\text{Products.Brand\_ID}=\text{Brands.ID}} \\
+        &\;\rho_{\text{Brand\_Name/Name}}(\text{Brands})
+      \bigr)
+    \end{align*}
+    Steps: (1) rename \texttt{Name} in Products to \texttt{Product\_Name};
+    (2) rename \texttt{Name} in Brands to \texttt{Brand\_Name} — this
+    avoids an ambiguous attribute name; (3) join on the brand identifier;
+    (4) project to only the three desired columns.
+  \end{examples}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Left Semi Join $\ltimes$ and Right Semi Join $\rtimes$}
+  A semi join tests for the \emph{existence} of a match but does
+  \textbf{not} append data from the other side.  Only attributes from one
+  relation appear in the result.
+
+  \begin{block}{Left Semi Join $\ltimes$}
+    Returns all tuples of the \textbf{left} relation for which at least
+    one matching tuple exists in the right relation.  Only the columns of
+    the left relation are included.\\
+    Syntax: $X \ltimes_{X.A\,=\,Y.A} Y$
+  \end{block}
+
+  \begin{block}{Right Semi Join $\rtimes$}
+    Symmetric counterpart: returns tuples of the \textbf{right} relation
+    that have a match in the left relation, using only the right relation's
+    columns.
+  \end{block}
+
+  \begin{examples}{Use Case}
+    \textbf{``Which customers have placed at least one order?''}\\
+    $\text{Customers} \ltimes_{\text{Customers.ID}=\text{Orders.Customer\_ID}} \text{Orders}$\\
+    Each customer appears at most once in the result (no row-per-order
+    duplication), and no order data is added to the output.
+  \end{examples}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Left Outer Join $\bowtie_L$ and Right Outer Join $\bowtie_R$}
+  Outer joins \textbf{preserve} tuples even when no match exists in the
+  other relation.  Missing attribute values are filled with \texttt{NULL}.
+
+  \begin{block}{Left Outer Join $\bowtie_L$}
+    All tuples from the \textbf{left} relation are kept.  Matching tuples
+    from the right are appended; where no match exists the right-side
+    columns are filled with \texttt{NULL}.
+  \end{block}
+
+  \begin{block}{Right Outer Join $\bowtie_R$}
+    All tuples from the \textbf{right} relation are kept.  Matching tuples
+    from the left are appended; \texttt{NULL}-filled otherwise.
+  \end{block}
+
+  \begin{examples}{Example — Left Outer Join}
+    $X \bowtie_L Y$: $X$ has entries $A_1, A_2, A_3$; $Y$ matches only
+    $A_1$ and $A_3$.\\
+    Result: $A_1$ (with $Y$ data), $A_2$ (right columns = \texttt{NULL}),
+    $A_3$ (with $Y$ data).\\[4pt]
+    \textbf{Use case:} ``Get all customers and their orders, including
+    customers who haven't placed any order yet.''
+  \end{examples}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Full Outer Join $\bowtie_{LR}$ and Anti Join $\triangleright$}
+  \begin{block}{Full Outer Join $\bowtie_{LR}$}
+    All tuples from \textbf{both} sides are preserved.
+    \texttt{NULL}-filled for missing matches on either side.
+    \[
+      R_1 \bowtie_{LR} R_2
+        \;=\; (R_1 \bowtie_L R_2) \cup (R_1 \bowtie_R R_2)
+    \]
+    Example: $X \bowtie_{LR} Y$ where $X = \{A_1, A_2\}$ and
+    $Y = \{A_1, A_3\}$ produces three result tuples: $(A_1,\text{match})$,
+    $(A_2, \texttt{NULL})$, $(\texttt{NULL}, A_3)$.
+  \end{block}
+
+  \begin{block}{Anti Join $\triangleright$}
+    Returns tuples from $R_1$ for which there is \textbf{no} matching
+    tuple in $R_2$ — the complement of a semi join.
+    \[
+      X \;\triangleright_{X.A\,=\,Y.A}\; Y
+    \]
+    Example: if $X = \{A_1, A_2\}$ and $Y$ matches only $A_1$, the anti
+    join returns only $A_2$.
+  \end{block}
+
+  \begin{examples}{Use Case}
+    \textbf{``Find customers who have \emph{never} placed an order.''}\\
+    $\text{Customers} \;\triangleright_{\text{ID}=\text{Customer\_ID}}\; \text{Orders}$
+  \end{examples}
+\end{frame}

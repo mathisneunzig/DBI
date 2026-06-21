@@ -1,0 +1,281 @@
+% ============================================================
+%  Section 1: Database Systems
+% ============================================================
+\section{Database Systems}
+
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{Why Do We Need Data Storage?}
+
+  \begin{alertblock}{Open Question -- Think Before Reading On}
+    \textit{Why does virtually every software system need some form of persistent data storage?}
+  \end{alertblock}
+
+  \vspace{0.5em}
+  \begin{block}{A First Intuition}
+    \begin{itemize}
+      \item Every meaningful application manages \textbf{state} -- users, orders, messages, sensor readings, \ldots
+      \item Without structured storage, \textbf{all data is lost} when the application restarts or the machine shuts down.
+      \item Even a mobile flashlight app stores a preference (``was the torch on?'').
+    \end{itemize}
+  \end{block}
+
+  \vspace{0.5em}
+  It is easy to underestimate just how universal data persistence is. From the smallest IoT sensor logging temperature readings to a global e-commerce platform tracking billions of transactions, the need to store, retrieve, and update data reliably sits at the heart of almost all software engineering. Understanding \emph{how} to do this well -- efficiently, consistently, and securely -- is therefore one of the most fundamental skills in the field. This course gives you the theoretical foundation and practical tools to get there.
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{The Problem with File-Based Storage}
+
+  \begin{examples}{Scenario: A Supermarket's ``Database''}
+    The accounting team stores everything in Excel:
+    \vspace{0.3em}
+    \begin{columns}
+      \column{0.48\textwidth}
+        \begin{itemize}
+          \item \texttt{Customers.xlsx}
+          \item \texttt{Items.xlsx}
+          \item \texttt{Orders.xlsx}
+          \item \texttt{Prices.xlsx}
+        \end{itemize}
+      \column{0.48\textwidth}
+        \begin{itemize}
+          \item \texttt{Old\_Orders.xlsx}
+          \item \texttt{Prices\_from\_September\_1st.xlsx}
+          \item \texttt{Urgent\_Orders\_copy.xlsx}
+          \item \texttt{Items\_discontinued.xlsx}
+        \end{itemize}
+    \end{columns}
+  \end{examples}
+
+  \vspace{0.5em}
+  \begin{alertblock}{Core Problems}
+    \begin{itemize}
+      \item \textbf{Ownership silos:} Files belong to different teams (Accounting, HR, Customer Relations, Sales) -- no single source of truth.
+      \item \textbf{Redundancy:} The same customer address may appear in three files, each with a different spelling.
+      \item \textbf{Inconsistency:} After a price update, only some files are changed -- leading to contradictory records.
+      \item \textbf{No concurrent access:} Two people editing the same file simultaneously cause data loss or corruption.
+      \item \textbf{No application integration:} A web or mobile app cannot safely open and parse Excel files in real time.
+    \end{itemize}
+  \end{alertblock}
+
+  This ``spreadsheet chaos'' is not hypothetical -- it is a pattern seen regularly in small and medium enterprises. The problems compound quickly as the organisation grows, and the cost of migrating to a proper database only increases the longer migration is delayed.
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{The Need for a Database}
+
+  \begin{examples}{Scenario: Launching ``Cat Shop 24''}
+    Your team is building a mobile shopping app with:
+    \begin{itemize}
+      \item Personalised \textbf{coupons} and \textbf{reward points}
+      \item Monthly \textbf{prize draws} for registered users
+      \item Structured \textbf{data collection} for analytics
+    \end{itemize}
+  \end{examples}
+
+  \vspace{0.5em}
+  \begin{alertblock}{The Core Constraint}
+    A mobile phone \textbf{cannot} connect directly to a local Excel file on someone's office PC.\\
+    The app needs a server-side data store that is:
+    \begin{itemize}
+      \item Always available (24/7)
+      \item Accessible over the network
+      \item Capable of handling many users simultaneously
+      \item Consistent and reliable even under load
+    \end{itemize}
+  \end{alertblock}
+
+  \begin{block}{Conclusion}
+    \centering
+    \large\textbf{They need a proper database.}
+  \end{block}
+
+  This scenario illustrates that the choice to use a database is not a technical luxury but a \emph{practical necessity} as soon as software needs to serve multiple users, persist data reliably, or be accessed over a network. The following slides define what exactly a database is and how it solves each of these problems.
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{Data}
+
+  \begin{block}{Definition}
+    \textbf{Data} consists of raw, unprocessed facts. On their own, individual data points carry no direct value or meaning -- they are simply observations or records of events.
+  \end{block}
+
+  \vspace{0.5em}
+  \textbf{Examples of raw data:}
+  \begin{itemize}
+    \item A single receipt number: \texttt{REC-00482}
+    \item A temperature reading: \texttt{21.4}
+    \item A timestamp: \texttt{2026-09-09 12:47:33}
+    \item The number: \texttt{488000000}
+  \end{itemize}
+
+  \vspace{0.5em}
+  \begin{examples}{Analogy: Raw Ingredients}
+    Data is like raw ingredients in a kitchen -- flour, eggs, sugar -- before any cooking has happened. Each ingredient exists, but without a recipe and a chef, nothing useful is produced.
+  \end{examples}
+
+  The distinction between data and information might seem philosophical, but it has practical consequences for how we design systems. A database stores data; the application layer (or an analytical query) is responsible for turning that data into information. Keeping this separation clean leads to more flexible and maintainable systems.
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{Information}
+
+  \begin{block}{Definition}
+    \textbf{Information} is data that has been processed and contextualised in a way that gives it value and meaning. Information answers a question that someone actually cares about.
+  \end{block}
+
+  \vspace{0.5em}
+  \textbf{Example: A Sales Dashboard}
+  \begin{itemize}
+    \item Raw data: millions of individual transaction records in a database.
+    \item Information derived from that data:
+    \begin{itemize}
+      \item \textit{Current year total sales: \$488\,M}
+      \item \textit{Budget variance: $+$3.2\,\%}
+      \item \textit{Year-over-year growth: $+$11.7\,\%}
+      \item A chart showing weekly sales trends over 12 months
+    \end{itemize}
+  \end{itemize}
+
+  \vspace{0.5em}
+  \begin{examples}{The Key Question}
+    Data becomes information when it \textbf{answers a question}:\\
+    ``How are we performing relative to last year?''
+  \end{examples}
+
+  This transformation -- from data to information -- is one of the core value propositions of database systems. A well-designed database does not just store records; it enables fast, accurate retrieval and aggregation that allows decision-makers to gain genuine insight. SQL, which we will study in depth later in this course, is the primary language for expressing these transformations.
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{Metadata}
+
+  \begin{block}{Definition}
+    \textbf{Metadata} is data \emph{about} data. It provides the structural and administrative context that makes raw data interpretable and manageable.
+  \end{block}
+
+  \vspace{0.3em}
+  \textbf{Types of metadata in a database context:}
+  \begin{itemize}
+    \item \textbf{Data types:} \texttt{String}, \texttt{Integer}, \texttt{Boolean}, \texttt{Date}, \ldots
+    \item \textbf{Semantic types:} \texttt{EmailAddress}, \texttt{PhoneNumber}, \texttt{PostalCode}, \ldots
+    \item \textbf{Relationships:} ``Column \texttt{customer\_id} references table \texttt{Customers}''
+    \item \textbf{Administrative data:} \texttt{created\_at}, \texttt{created\_by}, \texttt{last\_modified}, \texttt{owner}
+    \item \textbf{Access control:} Who may read, write, or delete each piece of data?
+    \item \textbf{Derived rules:} Mathematical formulas, computed columns, check constraints
+  \end{itemize}
+
+  \vspace{0.3em}
+  \begin{alertblock}{Why Metadata Matters}
+    Without metadata, a column containing the value \texttt{21.4} could be a temperature, a price, a probability, or a latitude. Metadata tells us -- and the DBMS -- what the value \emph{means} and how it may be used.
+  \end{alertblock}
+
+  Metadata is what transforms a flat file full of numbers into a structured, self-describing database. One of the key advantages of using a DBMS over storing data in raw files is that the DBMS manages metadata automatically and enforces it consistently -- something a spreadsheet simply cannot do reliably at scale.
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{What is a Database System?}
+
+  \begin{block}{Conceptual Overview}
+    \centering
+    \vspace{0.4em}
+    \Large
+    \textbf{Data} $+$ \textbf{Metadata}
+    $\;\longrightarrow\;$
+    \textbf{Database System}
+    $\;\longrightarrow\;$
+    \textbf{Information}
+    \vspace{0.4em}
+  \end{block}
+
+  \vspace{0.5em}
+  \begin{itemize}
+    \item A \textbf{Database System (DBS)} combines:
+    \begin{itemize}
+      \item The \textbf{DBMS} (Database Management System) -- the software layer
+      \item The actual \textbf{stored data} (the database itself)
+    \end{itemize}
+    \item Together they form a complete system capable of storing, organising, and serving data reliably.
+  \end{itemize}
+
+  \vspace{0.5em}
+  \begin{examples}{Common Database Systems}
+    \begin{tabular}{ll}
+      \textbf{Relational:}    & MySQL, PostgreSQL, MS SQL Server, Oracle \\
+      \textbf{Document:}      & MongoDB, CouchDB \\
+      \textbf{Key-Value:}     & Redis, DynamoDB \\
+      \textbf{Graph:}         & Neo4j \\
+    \end{tabular}
+  \end{examples}
+
+  It is important to understand the distinction between a \emph{database} (the data itself, stored on disk) and a \emph{DBMS} (the software that manages it). In everyday speech these terms are often used interchangeably, but in this course we will be precise: the DBMS is what you install; the database is what you create and populate. Together they form the DBS.
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{Database Management System (DBMS)}
+
+  \begin{block}{What is a DBMS?}
+    A \textbf{DBMS} is a software system (informally: ``the database'') that provides a controlled, structured interface between users/applications and the raw data stored on disk.
+  \end{block}
+
+  \vspace{0.3em}
+  \textbf{Core functions of a DBMS:}
+  \begin{enumerate}
+    \item \textbf{Define} data types, table structures, and integrity constraints
+    \item \textbf{Store} data efficiently and without inconsistencies
+    \item \textbf{Retrieve / Query} data in flexible and performant ways
+    \item \textbf{Update} existing data while preserving consistency
+    \item \textbf{Manage concurrent access} by multiple users simultaneously
+    \item \textbf{Protect data} from hardware failures and malicious actors
+  \end{enumerate}
+
+  \vspace{0.3em}
+  \begin{block}{Additional Components Typically Included}
+    \begin{itemize}
+      \item \textbf{User interface:} administration console, query editor
+      \item \textbf{Query language:} SQL (for relational systems)
+      \item \textbf{Metadata storage:} types, relations, \texttt{created\_at}, \texttt{created\_by}, access rights, semantic type annotations
+    \end{itemize}
+  \end{block}
+
+  Each of these six core functions solves a specific problem that arises when managing data at scale. Over the coming sessions we will explore how modern DBMS implementations address all six -- in particular, concurrency (session S3-9), protection and recovery (S3-9 and S3-10), and the query language SQL (S3-6 through S3-8).
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{DBMS: Pros and Cons}
+
+  \begin{columns}
+    \column{0.5\textwidth}
+      \begin{block}{Advantages}
+        \begin{itemize}
+          \item \textbf{Reduced redundancy} -- a single source of truth (when designed correctly)
+          \item \textbf{Access restriction} -- fine-grained permissions per user or role
+          \item \textbf{Automatic backup \& recovery} -- data is protected from failures
+          \item \textbf{Multiple user interfaces} -- CLI, GUI, programmatic APIs
+          \item \textbf{Triggers \& automation} -- the DBMS can react to events automatically
+          \item \textbf{Efficient data processing} -- indexes, query optimisers, caching
+          \item \ldots and much more
+        \end{itemize}
+      \end{block}
+
+    \column{0.48\textwidth}
+      \begin{alertblock}{Disadvantages}
+        \begin{itemize}
+          \item \textbf{High initial investment:} installation, configuration, licences, hardware
+          \item \textbf{Ongoing costs:} administration, tuning, DBA staffing, software maintenance
+          \item \textbf{Overkill for trivial tasks:} a config file or a single CSV may be perfectly adequate for a small, single-user application
+        \end{itemize}
+      \end{alertblock}
+  \end{columns}
+
+  \vspace{0.5em}
+  The decision to adopt a DBMS is ultimately an engineering trade-off. For any system that will grow, be accessed by multiple users, or need to guarantee data integrity, the benefits almost always outweigh the costs. However, good engineers also recognise when simpler solutions are appropriate -- not every project needs a full relational DBMS with replication and failover. The skill lies in matching the tool to the problem.
+\end{frame}

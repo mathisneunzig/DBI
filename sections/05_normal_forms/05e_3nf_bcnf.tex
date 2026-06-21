@@ -1,0 +1,122 @@
+% ---------------------------------------------------------------------------
+\begin{frame}{Third Normal Form (3NF)}
+  \begin{block}{Definition}
+    A relation is in \textbf{3NF} if it is in 2NF and no non-prime attribute is
+    \textbf{transitively dependent} on the primary key.  Every non-prime
+    attribute must depend \emph{directly} on the PK, not through another
+    non-prime attribute.
+  \end{block}
+
+  \begin{itemize}
+    \item \textbf{Transitive dependency:}
+          $PK \to A \to B$, where $A$ is non-prime.  $B$ does not depend
+          directly on the PK; it reaches the PK via $A$.
+    \item In our \texttt{Albums} table:\\
+          $\texttt{AlbumID} \to \texttt{MainArtist} \to \texttt{Debut}$\\
+          The artist's debut year depends on the artist, not on the album.
+    \item \textbf{Fix:} Extract a separate \texttt{Artists} table:
+          \begin{itemize}
+            \item \texttt{Albums(\underline{AlbumID}, Title, ArtistID, Genre, Release)}
+            \item \texttt{Artists(\underline{ArtistID}, Name, Debut)}
+            \item \texttt{Songs(\underline{AlbumID, Song}, FeaturedArtist)}
+          \end{itemize}
+  \end{itemize}
+
+  \begin{block}{Why 3NF Matters in Practice}
+    Most production databases are designed to 3NF.  It eliminates the most
+    common anomalies with reasonable decomposition effort.  The
+    \textbf{Synthesis Algorithm} always produces a 3NF schema that is both
+    lossless and dependency-preserving.
+  \end{block}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{Boyce-Codd Normal Form (BCNF)}
+  \begin{block}{Definition}
+    A relation is in \textbf{BCNF} (sometimes called \emph{3.5NF}) if it is in
+    3NF and for \emph{every} non-trivial FD $A \to B$, $A$ is a
+    \textbf{superkey}.
+  \end{block}
+
+  \begin{itemize}
+    \item BCNF is \textbf{strictly stronger} than 3NF: it catches edge cases
+          where 3NF still permits anomalies.
+    \item In 3NF, the right-hand side of an FD is allowed to be a prime
+          attribute; BCNF \emph{disallows} this exception.
+    \item \textbf{Example violation:}
+          \texttt{Releases(\underline{ID, Edition}, LabelID, Label)}\\
+          FDs: $\texttt{LabelID} \to \texttt{Label}$ and
+          $\texttt{Label} \to \texttt{LabelID}$.\\
+          Neither \texttt{LabelID} nor \texttt{Label} is a superkey, yet they
+          determine each other --- a BCNF violation.
+    \item \textbf{Fix:} Decompose into:\\
+          \texttt{Releases(\underline{ID, Edition}, LabelID)} and
+          \texttt{Labels(\underline{LabelID}, Label)}
+  \end{itemize}
+
+  \begin{alertblock}{Trade-off}
+    BCNF \emph{may not preserve all FDs} after decomposition.  If
+    dependency-preservation is critical, 3NF (via the Synthesis Algorithm) may
+    be preferred.
+  \end{alertblock}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{BCNF -- Example}
+  \textbf{Before (not in BCNF):}
+  \vspace{4pt}
+
+  \small
+  \begin{tabular}{llll}
+    \hline
+    \textbf{ID} & \textbf{Edition} & \textbf{LabelID} & \textbf{Label} \\
+    \hline
+    A100 & 3am Edition        & REP & Republic Records  \\
+    A101 & Late Night Edition & UMG & Universal Music   \\
+    \hline
+  \end{tabular}
+  \normalsize
+
+  \vspace{8pt}
+  FDs: $\{\texttt{ID, Edition}\} \to \texttt{LabelID} \to \texttt{Label}$
+  and $\texttt{Label} \to \texttt{LabelID}$.\\
+  \texttt{LabelID} is \textbf{not} a superkey, yet $\texttt{LabelID} \to
+  \texttt{Label}$ --- \textbf{BCNF violation}!
+
+  \vspace{8pt}
+  \textbf{After (BCNF):}
+  \vspace{4pt}
+
+  \small
+  \begin{columns}
+    \begin{column}{0.45\textwidth}
+      \begin{tabular}{lll}
+        \hline
+        \multicolumn{3}{c}{\textbf{Releases}} \\
+        \hline
+        \textbf{ID} & \textbf{Edition} & \textbf{LabelID} \\
+        \hline
+        A100 & 3am Edition        & REP \\
+        A101 & Late Night Edition & UMG \\
+        \hline
+      \end{tabular}
+    \end{column}
+    \begin{column}{0.35\textwidth}
+      \begin{tabular}{ll}
+        \hline
+        \multicolumn{2}{c}{\textbf{Labels}} \\
+        \hline
+        \textbf{LabelID} & \textbf{Label} \\
+        \hline
+        REP & Republic Records \\
+        UMG & Universal Music  \\
+        \hline
+      \end{tabular}
+    \end{column}
+  \end{columns}
+  \normalsize
+
+  \vspace{6pt}
+  Now every determinant (\texttt{ID}+\texttt{Edition} and \texttt{LabelID}) is
+  a superkey. BCNF satisfied.
+\end{frame}

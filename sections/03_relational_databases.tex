@@ -1,0 +1,464 @@
+\section{Relational Databases}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Edgar Frank ``Ted'' Codd}
+  \begin{block}{Biographical Overview}
+    \begin{itemize}
+      \item \textbf{19 August 1923 -- 18 April 2003}
+      \item Inventor of the \textbf{relational data model}, the concept of
+            \textbf{OLAP} (Online Analytical Processing), and co-designer of
+            \textbf{SEQUEL} (the precursor to SQL).
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Career Timeline at IBM}
+    \begin{itemize}
+      \item \textbf{1949}: Joins IBM New York as a developer.
+      \item \textbf{1965}: PhD in computer science, University of Michigan
+            (funded by IBM scholarship).
+      \item \textbf{1967}: Moves to IBM Almaden Research Center, San José.
+      \item \textbf{1969--1970}: Publishes the foundational papers on the
+            relational model, normal forms, and a relational sub-language.
+      \item \textbf{1970s}: Co-develops SEQUEL with Donald Chamberlin.
+    \end{itemize}
+  \end{block}
+
+  Codd's work matters because \textbf{almost all modern business software} --
+  banking, e-commerce, ERP, CRM, logistics -- runs on relational databases
+  that implement his mathematical framework.  He won the \textbf{Turing Award}
+  in 1981 for his contributions, the highest honour in computer science.
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Relations}
+  \begin{block}{Definition}
+    A \textbf{relation} is a mathematical set of tuples that all share the same
+    structure (schema).  It can be visualised as a \textbf{table} with named
+    columns and a collection of rows.
+    \begin{itemize}
+      \item Columns = \textbf{Attributes} (named, typed)
+      \item Rows = \textbf{Tuples} (concrete data records)
+      \item A table contains $0 \ldots *$ tuples.
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{}
+    \texttt{Album(\underline{ID}, EAN, Title, Main\_Artist, Release\_Date)}\\
+    \texttt{Track(\underline{ID}, Album\_ID\textsuperscript{FK}, Disc\_Nr, Track\_Nr, ISRC, Title, Duration)}
+  \end{examples}
+
+  The word \emph{relation} comes from the Latin \emph{relatio} -- the
+  relationship between entities of the same kind.  Because a relation is a
+  \textbf{mathematical set}, it contains \emph{no duplicate tuples} in the
+  pure theoretical definition.  In practice, SQL allows duplicates unless you
+  explicitly use \texttt{DISTINCT} or enforce a uniqueness constraint -- an
+  important distinction between the theory and its implementation.
+
+  The \textbf{closure property} of the relational model states that the
+  result of any relational operation is itself a relation, which means
+  operations can be arbitrarily composed and nested.
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Attributes}
+  \begin{block}{Definition}
+    An \textbf{attribute} is a named column in a relation that defines one
+    specific piece of data about the entities stored in that relation.
+    Every attribute has:
+    \begin{itemize}
+      \item A \textbf{name} (e.g.\ \texttt{Release\_Date})
+      \item A \textbf{domain} -- the set of all allowed values
+            (e.g.\ \texttt{DATE}, \texttt{VARCHAR(255)}, \texttt{INTEGER})
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{}
+    Attributes of \texttt{Album}:
+    \texttt{ID}, \texttt{EAN}, \texttt{Title}, \texttt{Main\_Artist},
+    \texttt{Release\_Date}\\[4pt]
+    The domain of \texttt{EAN} is a 13-digit integer;
+    the domain of \texttt{Title} is a non-empty string of up to 255 characters.
+  \end{examples}
+
+  Attributes describe the \emph{properties} or \emph{characteristics} of the
+  entities stored in a table.  Choosing good attribute names is not a minor
+  stylistic concern -- unclear names lead to misunderstandings, bugs, and
+  costly data migrations later.  Best practices include:
+  \begin{itemize}
+    \item Use \textbf{self-describing} names (\texttt{release\_date} not
+          \texttt{rd} or \texttt{date1}).
+    \item Apply a \textbf{consistent naming convention} across the entire
+          schema (snake\_case or camelCase -- pick one).
+    \item Avoid reserved SQL words as attribute names.
+  \end{itemize}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Tuples}
+  \begin{block}{Definition}
+    A \textbf{tuple} is a single row (record) in a relation -- an ordered
+    list of values, one per attribute, all conforming to their respective
+    domains.  A tuple may contain \texttt{NULL} for optional attributes.
+  \end{block}
+
+  \begin{examples}{}
+    A tuple of \texttt{Album}:\\[4pt]
+    \texttt{(K5MIF8A,\ 4130971072345,\ Fearless,\ Taylor Swift,\ 2008-11-11)}\\[6pt]
+    A tuple of \texttt{Track}:\\[4pt]
+    \texttt{(T00042,\ K5MIF8A,\ 1,\ 1,\ USUG10801234,\ Love Story,\ 00:03:55)}
+  \end{examples}
+
+  The term \emph{tuple} comes from mathematics (a finite ordered list:
+  pair, triple, quadruple, \ldots, $n$-tuple).  In relational theory each
+  tuple is a complete, self-contained fact about an entity.
+  In SQL terminology a tuple is a \textbf{row}; in object-oriented
+  terminology it corresponds approximately to an \textbf{instance} of a class.
+
+  \medskip
+  A crucial point: within one relation, \textbf{no two tuples may be
+  identical} in the strict relational model.  This is why every table
+  needs at least one key -- to distinguish tuples from one another.
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Types of Keys}
+  \begin{block}{Overview}
+    \textbf{Keys} serve two purposes in the relational model:
+    \begin{enumerate}
+      \item \textbf{Identification}: uniquely identify every tuple within
+            a relation.
+      \item \textbf{Reference}: establish relationships between tuples in
+            different relations.
+    \end{enumerate}
+  \end{block}
+
+  \begin{block}{Key Taxonomy}
+    \begin{itemize}
+      \item \textbf{Super Key} -- any set of attributes that uniquely
+            identifies tuples.
+      \item \textbf{Candidate Key} -- a minimal super key.
+      \item \textbf{Primary Key} -- the chosen candidate key for a relation.
+      \item \textbf{Alternate / Secondary Key} -- candidate keys not
+            chosen as primary key.
+      \item \textbf{Foreign Key} -- an attribute referencing a primary key
+            in another relation.
+      \item \textbf{Simple Key} -- a key consisting of a single attribute.
+      \item \textbf{Composite Key} -- a key consisting of two or more
+            attributes.
+      \item \textbf{Natural Key} -- a key derived from a real-world attribute.
+      \item \textbf{Surrogate Key} -- an artificially generated identifier.
+    \end{itemize}
+  \end{block}
+
+  Understanding these distinctions is fundamental to good database design and
+  is essential for normalisation, referential integrity, and efficient indexing.
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Super Keys}
+  \begin{block}{Definition}
+    A \textbf{super key} is \emph{any} set of one or more attributes whose
+    combined values are unique across all tuples in a relation.
+    \begin{itemize}
+      \item A super key may contain \emph{more attributes than necessary}
+            for uniqueness -- it can include redundant attributes.
+      \item Every relation has at least one super key: the set of
+            \emph{all} its attributes is always a super key (trivially).
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{}
+    Super keys of \texttt{Album(\underline{ID}, EAN, Title, Main\_Artist, Release\_Date)}:\\[4pt]
+    $\{$\texttt{ID}$\}$, \quad
+    $\{$\texttt{EAN}$\}$, \quad
+    $\{$\texttt{ID, EAN}$\}$, \quad
+    $\{$\texttt{ID, Title}$\}$, \quad
+    $\{$\texttt{ID, EAN, Title}$\}$, \quad \ldots\\[4pt]
+    Even $\{$\texttt{ID, EAN, Title, Main\_Artist, Release\_Date}$\}$ is a super key.
+  \end{examples}
+
+  The concept of a super key is the \emph{starting point} for the key
+  taxonomy.  In practice, super keys with redundant attributes are not
+  directly useful -- we refine them into candidate keys by removing
+  unnecessary attributes.  However, understanding super keys helps clarify
+  \emph{why} minimality matters: smaller keys mean smaller indices, faster
+  lookups, and simpler foreign key references.
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Candidate Keys}
+  \begin{block}{Definition}
+    A \textbf{candidate key} is a \emph{minimal} super key: no proper
+    subset of its attributes is also a super key.
+    \begin{itemize}
+      \item \textbf{Unique}: no two tuples share the same candidate key value.
+      \item \textbf{Irreducible}: removing any attribute from the key breaks
+            uniqueness.
+      \item A relation can have \textbf{multiple} candidate keys.
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{}
+    Candidate keys of \texttt{Album}:
+    \begin{itemize}
+      \item \texttt{ID} -- internal surrogate identifier (UUID or integer)
+      \item \texttt{EAN} -- 13-digit product barcode (unique per album)
+    \end{itemize}
+    Candidate keys of \texttt{Track}:
+    \begin{itemize}
+      \item \texttt{ID} -- surrogate key
+      \item \texttt{ISRC} -- International Standard Recording Code (unique per recording)
+      \item $\{$\texttt{Album\_ID, Disc\_Nr, Track\_Nr}$\}$ -- composite natural key
+    \end{itemize}
+  \end{examples}
+
+  Identifying all candidate keys is a critical step in database design because
+  we must choose one as the primary key and enforce the others as unique
+  constraints.  Missing a candidate key means potentially allowing
+  \emph{logically duplicate} data even when the primary key differs.
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Primary Key}
+  \begin{block}{Definition}
+    The \textbf{primary key (PK)} is the candidate key officially chosen
+    as the main identifier for tuples in a relation.
+    \begin{itemize}
+      \item Must be \textbf{unique} for every tuple.
+      \item Must \textbf{never be \texttt{NULL}}.
+      \item Should be \textbf{stable} -- it should rarely or never change
+            after a tuple is created.
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{}
+    \texttt{Album(\textbf{\underline{ID}}, EAN, Title, Main\_Artist, Release\_Date)}\\
+    The primary key is \texttt{ID}; it is underlined by convention.
+  \end{examples}
+
+  In SQL, the \texttt{PRIMARY KEY} constraint automatically enforces both
+  uniqueness and \texttt{NOT NULL}.  Most database systems also create a
+  \textbf{clustered index} on the primary key, which physically orders
+  the rows on disk by PK value -- making primary-key lookups extremely fast.
+
+  \begin{alertblock}{Why stability matters}
+    If a primary key changes, every foreign key that references it must
+    also be updated (or the database must use \texttt{ON UPDATE CASCADE}).
+    A changing PK causes cascading updates across potentially millions of
+    rows.  This is the main reason surrogate keys are preferred as PKs.
+  \end{alertblock}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Alternate / Secondary Keys}
+  \begin{block}{Definition}
+    \textbf{Alternate keys} (also called \emph{secondary keys}) are
+    candidate keys that were \emph{not} selected as the primary key.
+    They are still genuine unique identifiers -- we simply chose a
+    different candidate key to be the PK.
+  \end{block}
+
+  \begin{examples}{}
+    In \texttt{Album}: Primary key = \texttt{ID},
+    so \texttt{EAN} becomes the \textbf{alternate key}.\\[4pt]
+    In SQL: \quad \texttt{UNIQUE (EAN)} \quad -- enforces uniqueness without
+    making \texttt{EAN} the primary key.
+  \end{examples}
+
+  Alternate keys serve an important practical role: \textbf{external systems}
+  often know a natural identifier (EAN, ISBN, ISRC) but not the internal
+  surrogate ID.  By enforcing a unique constraint on the alternate key, you
+  allow efficient lookups from those external systems while keeping a
+  clean surrogate PK for internal foreign key references.
+
+  \medskip
+  A good database schema \textbf{enforces all candidate keys}, not just
+  the primary key.  Failing to do so allows logically duplicate records
+  that differ only in their surrogate ID -- a common source of data
+  quality problems in production systems.
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Foreign Keys}
+  \begin{block}{Definition}
+    A \textbf{foreign key (FK)} is an attribute (or set of attributes)
+    in one relation whose values must match an existing primary key value
+    in another (or the same) relation -- or be \texttt{NULL}.
+    \begin{itemize}
+      \item Enforces \textbf{referential integrity}: you cannot reference
+            a tuple that does not exist.
+      \item Creates a \textbf{parent--child} relationship between tables.
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{}
+    \texttt{Track(\underline{ID}, \textit{Album\_ID}\textsuperscript{FK}, Disc\_Nr, \ldots)}\\[4pt]
+    \texttt{Album\_ID} in \texttt{Track} references \texttt{ID} in \texttt{Album}.\\
+    Inserting a track for a non-existent album raises an integrity error.
+  \end{examples}
+
+  \begin{alertblock}{Referential Integrity Actions}
+    When a referenced tuple is deleted or its PK is updated, the database
+    must decide what to do with referencing rows.  SQL offers:
+    \texttt{RESTRICT}, \texttt{CASCADE}, \texttt{SET NULL}, \texttt{SET DEFAULT}.
+    Choosing the right action is part of schema design -- \texttt{CASCADE DELETE}
+    can silently destroy large amounts of data if misapplied.
+  \end{alertblock}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Simple vs.\ Composite Keys}
+  \begin{block}{Simple Key}
+    A \textbf{simple key} consists of a \textbf{single attribute}.
+    \begin{itemize}
+      \item Easy to reference as a foreign key (one column).
+      \item Typically a surrogate (auto-increment integer or UUID).
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Composite Key}
+    A \textbf{composite key} consists of \textbf{two or more attributes}
+    whose combined values are unique.
+    \begin{itemize}
+      \item Common in \textbf{junction / association tables} that
+            represent many-to-many relationships.
+      \item Natural uniqueness constraints often emerge as composite keys.
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{}
+    Simple key: \texttt{ID} in \texttt{Album}\\[4pt]
+    Composite key: \texttt{\{Album\_ID, Disc\_Nr, Track\_Nr\}} in \texttt{Track}\\
+    $\Rightarrow$ Disc 1, Track 3 of album ``K5MIF8A'' identifies exactly one track.
+  \end{examples}
+
+  \textbf{Rule of thumb}: prefer a simple surrogate primary key.
+  Composite keys as PKs make foreign key references more verbose (all
+  columns must be replicated) and join conditions more complex.
+  Use composite keys as \emph{unique constraints} to enforce natural
+  business rules, but keep the PK simple.
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Natural vs.\ Surrogate Keys}
+  \begin{block}{Natural Key}
+    A \textbf{natural key} is derived from a real-world attribute that
+    already exists in the data domain.
+    \begin{itemize}
+      \item Examples: EAN (barcode), ISBN (book), ISRC (music track),
+            social security number, email address.
+      \item \textbf{Pros}: human-readable, meaningful, no artificial column needed.
+      \item \textbf{Cons}: may change (email addresses change!), often long
+            (bad for indices and FK columns), may be unavailable at insert time.
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Surrogate Key}
+    A \textbf{surrogate key} is an artificially generated identifier with
+    no inherent business meaning.
+    \begin{itemize}
+      \item Examples: auto-increment integer (\texttt{SERIAL}), UUID v4.
+      \item \textbf{Pros}: stable, compact, always available, never changes.
+      \item \textbf{Cons}: meaningless on its own, requires joining to see
+            human-readable identity.
+    \end{itemize}
+  \end{block}
+
+  \begin{alertblock}{Best Practice}
+    Use a \textbf{surrogate key as the primary key} and enforce natural
+    keys as \texttt{UNIQUE} constraints (alternate keys).  You get the
+    stability of a surrogate and the integrity guarantee of the natural key.
+  \end{alertblock}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Exercise: Relational Databases}
+  \begin{block}{Task}
+    Work through relations \textbf{Exercise 1A} through \textbf{Exercise 1D}.\\
+    (Simple: 1A \& 1B \quad Intermediate: 1C \& 1D)
+  \end{block}
+
+  For each relation, answer the following questions:
+
+  \begin{enumerate}
+    \item List all \textbf{attributes} and their domains.
+    \item Identify all \textbf{candidate keys}; select and justify your choice of
+          \textbf{primary key}.
+    \item Identify all \textbf{foreign keys} and state which primary key each
+          one references.
+    \item Classify every key as
+          \emph{simple / composite} and \emph{natural / surrogate}.
+    \item Create \textbf{2 realistic sample tuples} for each relation that
+          respect all constraints.
+  \end{enumerate}
+
+  \begin{alertblock}{Time: 15 minutes}
+    Then we will discuss the solutions together.  There is often more than one
+    valid choice of primary key -- be prepared to justify yours.
+  \end{alertblock}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Preview: Relational Algebra}
+  \begin{block}{Why Do We Need It?}
+    Defining relations, attributes, and keys tells us \emph{how to store}
+    data.  We now need a formal language to describe \emph{how to query
+    and manipulate} that data.
+  \end{block}
+
+  \textbf{Relational algebra} provides the mathematical foundation for all
+  relational query languages, including SQL.  It defines a small set of
+  \textbf{operations on relations that produce new relations} (closure property),
+  which can be freely composed.
+
+  \medskip
+  Core operations we will cover:
+
+  \begin{itemize}
+    \item Selection $\sigma$ -- filter rows by a predicate
+    \item Projection $\pi$ -- select a subset of columns
+    \item Rename $\rho$ -- rename a relation or attribute
+    \item Union $\cup$, Intersection $\cap$, Difference $\setminus$ -- set operations
+    \item Cartesian product $\times$ -- combine every pair of tuples
+    \item Join $\bowtie$ -- combine related tuples (natural join)
+    \item Left / Right outer join $\ltimes$ / $\rtimes$
+    \item Division $\div$ -- ``find all X that are associated with all Y''
+  \end{itemize}
+
+  Every SQL query you will ever write is an expression in relational algebra
+  in disguise -- understanding the algebra makes SQL comprehensible rather
+  than a collection of memorised syntax.
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Preview: Normal Forms}
+  \begin{block}{Motivation}
+    Not all relation designs are equally good.  A poorly designed schema
+    can lead to:
+    \begin{itemize}
+      \item \textbf{Redundancy} -- the same fact stored in multiple places.
+      \item \textbf{Update anomalies} -- changing one fact requires updating
+            many rows; missing one causes inconsistency.
+      \item \textbf{Insertion anomalies} -- you cannot record a fact without
+            first recording an unrelated fact.
+      \item \textbf{Deletion anomalies} -- deleting one fact accidentally
+            destroys another.
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Normal Forms}
+    \textbf{Normal forms} are a hierarchy of design rules that systematically
+    eliminate these problems by ensuring each fact is stored exactly once.
+    We will cover:
+    \begin{itemize}
+      \item \textbf{1NF} -- atomic values, no repeating groups
+      \item \textbf{2NF} -- no partial functional dependencies on a composite PK
+      \item \textbf{3NF} -- no transitive functional dependencies
+      \item \textbf{BCNF} -- Boyce--Codd Normal Form (stronger 3NF)
+      \item \textbf{4NF / 5NF} -- optional, for multi-valued and join dependencies
+    \end{itemize}
+  \end{block}
+
+  Normalisation is the \emph{bridge} between a rough data model and a
+  production-quality database schema.
+\end{frame}

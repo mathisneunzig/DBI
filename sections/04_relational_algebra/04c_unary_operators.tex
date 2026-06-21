@@ -1,0 +1,152 @@
+% ----------------------------------------------------------
+\begin{frame}{Restriction $\sigma$}
+  The restriction operator (also called \emph{selection}) \textbf{filters
+  rows} of a relation, keeping only those tuples that satisfy a given
+  Boolean condition.  It is the relational algebra equivalent of the SQL
+  \texttt{WHERE} clause.
+
+  \begin{block}{Key Points}
+    \begin{itemize}
+      \item The \emph{schema} of the output is identical to the input;
+            only the number of rows may decrease.
+      \item Conditions can use comparison operators
+            ($=$, $\neq$, $<$, $>$, $\leq$, $\geq$) and logical
+            connectives $\wedge$ (AND) and $\vee$ (OR).
+      \item Multiple restrictions can be chained or merged:
+            \[
+              \sigma_{C_1}(\sigma_{C_2}(R)) = \sigma_{C_1 \wedge C_2}(R)
+            \]
+      \item Syntax: $\sigma_{\text{condition}}(R)$
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{Example}
+    \[
+      \sigma_{\text{Department} = \text{`D01'}}(\text{Employees})
+    \]
+    Returns all employee tuples where the Department attribute equals
+    \texttt{D01}.  All other tuples are discarded; the column set is
+    unchanged.
+  \end{examples}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Projection $\pi$}
+  The projection operator \textbf{selects specific columns} from a
+  relation, discarding all other attributes.  It corresponds to naming
+  individual columns in a SQL \texttt{SELECT} list (as opposed to
+  \texttt{SELECT *}).
+
+  \begin{block}{Key Points}
+    \begin{itemize}
+      \item The number of rows stays the same \emph{unless} removing
+            columns causes duplicate tuples — duplicates are then
+            eliminated (pure relational algebra).  In SQL you need
+            \texttt{DISTINCT} explicitly.
+      \item Syntax: $\pi_{\text{col}_1,\,\text{col}_2,\,\ldots}(R)$
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{Examples}
+    \begin{itemize}
+      \item $\pi_{\text{User, ID, Department}}(\text{Employees})$ —
+            return only those three columns from the Employees relation.
+      \item Combining restriction and projection:
+            \[
+              \pi_{\text{User}}\!\left(\sigma_{\text{Dept}=\text{`D01'}}(\text{Employees})\right)
+            \]
+            First filter to department D01, then project to the User
+            column only.  This is a typical two-step pattern.
+    \end{itemize}
+  \end{examples}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Rename $\rho$}
+  The rename operator changes the \textbf{name of a relation or its
+  attributes} without modifying the actual data.  It is a purely
+  structural operation needed whenever two relations that are to be
+  combined share attribute names that would otherwise clash.
+
+  \begin{block}{Key Points}
+    \begin{itemize}
+      \item \textbf{Rename relation:}
+            $\rho_{\text{NewName}}(R)$ — gives the whole relation a new
+            name.
+      \item \textbf{Rename attribute:}
+            $\rho_{(\text{NewAttr}/\text{OldAttr})}(R)$ — renames one
+            attribute; all data remain unchanged.
+      \item Particularly important when self-joining a table (you need two
+            differently named copies) or when joining tables that happen to
+            share a column name that should \emph{not} be the join
+            criterion.
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{Examples}
+    \begin{itemize}
+      \item $\rho_{\text{Employees}}(\text{Empl})$ — rename the relation
+            \texttt{Empl} to \texttt{Employees}.
+      \item $\rho_{(\text{Username}/\text{User})}(\text{Employees})$ —
+            rename the attribute \texttt{User} to \texttt{Username} inside
+            the Employees relation.
+    \end{itemize}
+  \end{examples}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Division $\div$}
+  Division is the most complex basic operator.  $R_1 \div R_2$ returns
+  all values of the \emph{non-shared} attributes of $R_1$ for which the
+  corresponding shared attributes cover \textbf{every} tuple in $R_2$.
+  In plain language: ``find all $X$ that are associated with
+  \emph{all} $Y$.''
+
+  \begin{block}{Formal Definition}
+    Let $A$ denote the attributes in $R_1$ that are \emph{not} in $R_2$.
+    Then:
+    \[
+      R_1 \div R_2 \;=\; \pi_A(R_1)
+        \;\setminus\;
+        \pi_A\!\bigl((\pi_A(R_1) \times R_2) \setminus R_1\bigr)
+    \]
+    This derivation shows that division is not strictly primitive — it can
+    be expressed using projection, Cartesian product, and difference.
+  \end{block}
+
+  \begin{examples}{Example}
+    \textbf{Families $\div$ Children} — suppose the Children relation
+    lists two children: \emph{Linda} and \emph{Haley}.  The result
+    contains every parent tuple from Families who has \emph{both} Linda
+    and Haley as children.  A parent with only one of the two is
+    excluded.
+  \end{examples}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Additional Unary Operators}
+  Basic relational algebra covers the operators introduced so far, but
+  three additional unary operators are commonly added in practice to make
+  the language more expressive and to bridge the gap to real SQL features.
+
+  \begin{block}{Duplicate Elimination $\delta$}
+    Removes all duplicate tuples from a relation — equivalent to SQL
+    \texttt{DISTINCT}.\\
+    Example: $\delta\!\left(\pi_{\text{Department}}(\text{Employee})\right)$
+    — return a list of distinct department names.
+  \end{block}
+
+  \begin{block}{Grouping \& Aggregation $\gamma$}
+    Groups tuples by one or more attributes and computes aggregate
+    functions (\texttt{COUNT}, \texttt{SUM}, \texttt{AVG}, \texttt{MAX},
+    \texttt{MIN}) over each group — equivalent to SQL \texttt{GROUP BY}.\\
+    Example: $\gamma_{\text{Department,\;SUM(Salary)}}(\text{Employee})$
+  \end{block}
+
+  \begin{block}{Sorting $\tau$}
+    Sorts the tuples of a relation by one or more attributes with optional
+    \texttt{ASC}/\texttt{DESC} direction — equivalent to SQL
+    \texttt{ORDER BY}.\\
+    Example: $\tau_{\text{Department,\;Salary DESC}}(\text{Employee})$
+  \end{block}
+\end{frame}

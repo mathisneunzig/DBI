@@ -1,0 +1,45 @@
+% ============================================================
+%  Section 8 – SQL: Structured Query Language
+% ============================================================
+
+\section{Structured Query Language}
+
+% ----------------------------------------------------------
+\begin{frame}{What is SQL?}
+  \textbf{SQL} stands for \emph{Structured Query Language}.  Its original
+  name was \emph{SEQUEL} (Structured English Query Language), developed in
+  \textbf{1974 by IBM Research} (Donald Chamberlin and Raymond Boyce) as a
+  language for interacting with their System~R relational prototype.
+
+  \begin{block}{Standardisation History}
+    \begin{itemize}
+      \item \textbf{SQL-86} -- first ANSI/ISO standard
+      \item \textbf{SQL-92} -- major expansion; still the baseline for most
+            textbooks
+      \item \textbf{SQL:1999} -- added recursion, triggers, object extensions
+      \item \textbf{SQL:2003} -- window functions, XML support
+      \item \textbf{SQL:2016} -- JSON support, row pattern matching
+    \end{itemize}
+    Most relational DBMSs (MySQL, PostgreSQL, Oracle, SQL Server) implement
+    the core standard but each adds its own \textbf{dialect} -- small
+    differences in syntax, functions, and extensions.
+  \end{block}
+
+  \begin{alertblock}{Case Sensitivity}
+    SQL keywords (\texttt{SELECT}, \texttt{FROM}, \ldots) are
+    \textbf{not} case-sensitive.  String \emph{values} however \textbf{are}
+    case-sensitive: \texttt{'Hamburg'} $\neq$ \texttt{'hamburg'}.
+  \end{alertblock}
+
+  \begin{block}{Three Sublanguages}
+    \begin{itemize}
+      \item \textbf{DML} (Data Manipulation Language):
+            \texttt{SELECT}, \texttt{INSERT}, \texttt{UPDATE},
+            \texttt{DELETE}
+      \item \textbf{DDL} (Data Definition Language):
+            \texttt{CREATE}, \texttt{ALTER}, \texttt{DROP}
+      \item \textbf{DCL} (Data Control Language):
+            \texttt{GRANT}, \texttt{REVOKE}
+    \end{itemize}
+  \end{block}
+\end{frame}

@@ -1,0 +1,233 @@
+\section{Concurrency}
+
+\begin{frame}{What is Concurrency?}
+  \begin{block}{Definition}
+    \textbf{Concurrency} in the context of databases refers to the ability of multiple users or
+    processes to access and modify the same database data \textbf{simultaneously}, without
+    compromising data integrity or consistency.
+  \end{block}
+
+  \medskip
+  In any real production system -- an online shop, a banking application, an ERP -- hundreds or
+  thousands of transactions may be executing at the exact same moment. This is not an edge case;
+  it is the normal operating mode.
+
+  \medskip
+  Without proper concurrency control, the following problems arise:
+  \begin{itemize}
+    \item Users overwrite each other's changes (\emph{lost update}).
+    \item A user reads data that is about to be rolled back (\emph{dirty read}).
+    \item A user reads the same data twice and gets different results (\emph{non-repeatable read}).
+    \item A query sees a different set of rows on two successive executions (\emph{phantom read}).
+  \end{itemize}
+
+  \medskip
+  \textbf{Concurrency control} is one of the core responsibilities of any DBMS. The goal is to
+  allow maximum parallelism while guaranteeing that the result is always equivalent to some
+  \emph{serial} (one-at-a-time) execution of those same transactions -- a property called
+  \textbf{serializability}.
+\end{frame}
+
+\begin{frame}{Problem 1: Lost Update}
+  \textbf{Scenario:} two users simultaneously update the unit price of the same product.
+
+  \medskip
+  \begin{tabular}{@{}p{3.8cm}p{3.8cm}p{3.5cm}@{}}
+    \toprule
+    \textbf{User A} & \textbf{User B} & \textbf{What happens?} \\
+    \midrule
+    Read price (= 10.00) & & \\
+    & Read price (= 10.00) & Both see old value \\
+    Compute 10.00 + 2.00 & & \\
+    & Compute 10.00 $-$ 1.00 & \\
+    Write price = 12.00 & & A commits first \\
+    COMMIT & & \\
+    & Write price = 9.00 & B overwrites A! \\
+    & COMMIT & A's change is LOST \\
+    \bottomrule
+  \end{tabular}
+
+  \medskip
+  \begin{alertblock}{Result}
+    Both users read the same original value (10.00), calculated their own updates independently,
+    and the \emph{last writer wins}. User A's increase to 12.00 is completely overwritten and
+    lost. The final price is 9.00 instead of the logically correct 11.00 (or 8.00, depending on
+    which update was intended to be the ``final'' one).
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Problem 2: Dirty Read (Uncommitted Dependency)}
+  \textbf{Scenario:} an ATM reads an account balance that is subsequently rolled back.
+
+  \medskip
+  \begin{tabular}{@{}p{3.5cm}p{4cm}p{3.2cm}@{}}
+    \toprule
+    \textbf{ATM} & \textbf{Bank Server} & \textbf{What happens?} \\
+    \midrule
+    & BEGIN: incoming transfer of \EUR{500} & \\
+    & Balance: 300 + 500 = 800 (in cache) & \\
+    Read balance = 800 & & Reads \emph{dirty} data \\
+    COMMIT (displays \EUR{800}) & & \\
+    & ROLLBACK (transfer failed) & Balance reverts to 300 \\
+    \multicolumn{3}{l}{\textit{The ATM showed \EUR{800} but the real balance is \EUR{300}.}} \\
+    \bottomrule
+  \end{tabular}
+
+  \medskip
+  \begin{alertblock}{Result}
+    The ATM read data from a transaction that had not yet committed -- ``dirty'' (uncommitted)
+    data. When the bank server rolls back, the ATM has already confirmed a balance that no longer
+    exists. This can lead the customer to withdraw money they do not actually have.
+  \end{alertblock}
+
+  \medskip
+  A \textbf{dirty read} is prevented at isolation level \texttt{READ COMMITTED} or higher.
+\end{frame}
+
+\begin{frame}{Problem 3: Inconsistent Analysis (Non-Repeatable / Phantom Read)}
+  \textbf{Scenario:} an auditor totals three account balances while a transfer runs concurrently.\\
+  Initial state: Account\,1 = \EUR{400}, Account\,2 = \EUR{300}, Account\,3 = \EUR{700}
+  (total = \EUR{1\,400}).
+
+  \medskip
+  \begin{tabular}{@{}p{3.5cm}p{4cm}p{3cm}@{}}
+    \toprule
+    \textbf{User A (audit)} & \textbf{User B (transfer)} & \textbf{Event} \\
+    \midrule
+    Read Acc\,1 = 400 & & \\
+    Read Acc\,2 = 300 & & \\
+    & Acc\,3: 700 $-$ 600 = 100 & Transfer begins \\
+    & Acc\,1: 400 + 600 = 1\,000 & \\
+    & COMMIT & \\
+    Read Acc\,3 = 100 & & Sees new value! \\
+    Sum = 400+300+100 = \textbf{800} & & \textbf{Wrong! Should be 1\,400} \\
+    \bottomrule
+  \end{tabular}
+
+  \medskip
+  \begin{alertblock}{Result}
+    User A read the three accounts at \emph{different points in time} and saw a snapshot that
+    never actually existed. \EUR{600} appears to have vanished. This is the
+    \textbf{inconsistent analysis} problem -- also called a \emph{phantom read}. It is prevented
+    at isolation level \texttt{REPEATABLE READ} or \texttt{SERIALIZABLE}.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Concurrency Control Strategies}
+  Two fundamentally different philosophies for dealing with concurrent access:
+
+  \medskip
+  \begin{block}{Optimistic Concurrency Control (OCC)}
+    \textbf{Assumption:} conflicts are rare. Let all transactions proceed freely.
+    \begin{itemize}
+      \item Transactions read and write without acquiring any locks.
+      \item At \texttt{COMMIT} time, the DBMS checks whether a conflict occurred.
+      \item If a conflict is detected, the transaction is \textbf{aborted and retried}.
+      \item Pros: simple to implement; high throughput when conflicts are actually rare.
+      \item Cons: wasted work on conflict; poor performance under high contention.
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Pessimistic Concurrency Control (Lock-Based)}
+    \textbf{Assumption:} conflicts are likely. Prevent them before they happen.
+    \begin{itemize}
+      \item A transaction must \textbf{acquire a lock} on a data item before accessing it.
+      \item Other transactions that need the same item must \textbf{wait} for the lock to be
+            released.
+      \item Locks are released at transaction end (commit or rollback).
+      \item Pros: conflicts never occur in the first place; correct even under high contention.
+      \item Cons: complex; reduces parallelism; can cause \textbf{deadlocks}.
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Lock Granularity}
+  A \textbf{lock} can be placed at different levels of the data hierarchy. The \emph{granularity}
+  of a lock determines how much data is protected -- and how much concurrency is sacrificed.
+
+  \medskip
+  \begin{tabular}{@{}p{2cm}p{4.5cm}p{4cm}@{}}
+    \toprule
+    \textbf{Level} & \textbf{Description} & \textbf{Typical Use Case} \\
+    \midrule
+    Database & Locks the entire database; only one user can access it at a time &
+               System maintenance, bulk import, schema migrations \\[4pt]
+    Table    & Locks a single table; all rows are blocked for other writers &
+               Few-user systems; batch operations on one table \\[4pt]
+    Row (Tuple) & Locks a single row; other rows in the same table are freely accessible &
+               Standard production OLTP systems (MySQL InnoDB, PostgreSQL) \\[4pt]
+    Cell (Field) & Locks a single attribute value within a row &
+               Extremely rare; very complex to implement \\
+    \bottomrule
+  \end{tabular}
+
+  \medskip
+  \begin{block}{Design principle}
+    Always lock \textbf{the smallest amount of data necessary} to maintain correctness. Coarser
+    locks are easier to implement but destroy concurrency. Fine-grained row-level locks maximise
+    parallelism but require more overhead to track.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Shared and Exclusive Locks}
+  \begin{block}{Exclusive Lock (X-Lock) -- Write Lock}
+    Acquired by \texttt{UPDATE}, \texttt{INSERT}, and \texttt{DELETE} operations. While an X-lock
+    is held on a data item, \textbf{no other transaction may acquire any lock} (neither shared nor
+    exclusive) on that item. Writes require exclusive access.
+  \end{block}
+
+  \begin{block}{Shared Lock (S-Lock) -- Read Lock}
+    Acquired by \texttt{SELECT} operations. Multiple transactions may hold S-locks on the same
+    item simultaneously -- concurrent reads are always safe. However, \textbf{an X-lock cannot be
+    granted} while any S-lock is held, because a write while others are reading would produce
+    inconsistent results.
+  \end{block}
+
+  \medskip
+  \textbf{Lock compatibility matrix:}
+
+  \begin{tabular}{@{}lcc@{}}
+    \toprule
+    \textbf{Requested} $\backslash$ \textbf{Held} & \textbf{S-Lock held} & \textbf{X-Lock held} \\
+    \midrule
+    Request S-Lock & \textcolor{green!60!black}{Granted} & \textcolor{red}{Wait} \\
+    Request X-Lock & \textcolor{red}{Wait} & \textcolor{red}{Wait} \\
+    \bottomrule
+  \end{tabular}
+
+  \medskip
+  \begin{examples}{Summary}
+    Reads can run in parallel (S+S is fine). A write blocks all other accesses (X blocks
+    everything). This implements the intuitive rule: many readers are fine; a writer needs
+    exclusive access.
+  \end{examples}
+\end{frame}
+
+\begin{frame}{Deadlocks}
+  \begin{alertblock}{Definition}
+    A \textbf{deadlock} occurs when two or more transactions are each waiting for the other to
+    release a lock -- creating a circular dependency from which no transaction can escape on its own.
+  \end{alertblock}
+
+  \medskip
+  \textbf{Classic two-transaction deadlock:}
+  \begin{itemize}
+    \item Transaction A holds an X-lock on Row 1, now requests a lock on Row 2.
+    \item Transaction B holds an X-lock on Row 2, now requests a lock on Row 1.
+    \item A is waiting for B; B is waiting for A. Neither can proceed. Ever.
+  \end{itemize}
+
+  \medskip
+  \textbf{Detection and resolution -- two main approaches:}
+  \begin{itemize}
+    \item \textbf{Deadlock detection}: the DBMS maintains a ``waits-for'' graph (nodes are
+          transactions, edges are ``is waiting for''). Periodically check for \emph{cycles} in this
+          graph. When a cycle is found, one transaction (the \emph{victim}) is aborted and retried;
+          the others can then proceed. MySQL InnoDB and PostgreSQL use this approach.
+    \item \textbf{Deadlock prevention}: enforce a global ordering on resources and require all
+          transactions to acquire locks in that fixed order. If transaction A always locks Row 1
+          before Row 2, and B does the same, no circular wait can form. Alternatively, use
+          timestamps: the older (higher-priority) transaction waits; the younger one is aborted
+          (``wound-wait'' or ``wait-die'' schemes).
+  \end{itemize}
+\end{frame}

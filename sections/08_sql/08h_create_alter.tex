@@ -1,0 +1,101 @@
+% ----------------------------------------------------------
+\begin{frame}[fragile]{CREATE DATABASE and CREATE TABLE}
+  \begin{block}{Defining the Schema}
+\begin{lstlisting}[style=sqlstyle]
+-- Create a new database and switch to it
+CREATE DATABASE supermarket;
+USE supermarket;
+
+-- Create a table with various constraints
+CREATE TABLE employee (
+    id       INT AUTO_INCREMENT,
+    username VARCHAR(50)  NOT NULL UNIQUE,
+    email    VARCHAR(255),
+    age      INT,
+    PRIMARY KEY (id),
+    CHECK (age >= 18)
+);
+\end{lstlisting}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{AUTO\_INCREMENT}: MySQL automatically assigns the next
+          integer value when a row is inserted without specifying this
+          column.
+    \item \texttt{NOT NULL}: the column cannot be omitted or explicitly
+          set to \texttt{NULL} -- the insert is rejected if it is.
+    \item \texttt{UNIQUE}: all values in the column must be distinct across
+          all rows.  \texttt{NULL} is allowed (and multiple \texttt{NULL}s
+          are permitted) unless combined with \texttt{NOT NULL}.
+    \item \texttt{CHECK}: a boolean expression that every inserted or
+          updated row must satisfy.
+  \end{itemize}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Data Types}
+  Choosing the correct data type saves storage, improves performance, and
+  prevents data integrity errors.
+
+  \vspace{4pt}
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    \textbf{Type}          & \textbf{Description} \\
+    \midrule
+    \texttt{CHAR(n)}        & Fixed-length string of exactly $n$ characters \\
+    \texttt{VARCHAR(n)}     & Variable-length string, max $n$ characters \\
+    \texttt{BOOLEAN}        & 0 = false, any other value = true \\
+    \texttt{INT}            & Integer ($-2^{31}$ to $2^{31}-1$) \\
+    \texttt{DECIMAL(p,s)}   & Exact decimal: $p$ total digits, $s$ after decimal \\
+    \texttt{FLOAT / DOUBLE} & Approximate floating-point (avoid for money!) \\
+    \texttt{DATE}           & Date: \texttt{YYYY-MM-DD} \\
+    \texttt{TIME}           & Time: \texttt{HH:MM:SS} \\
+    \texttt{TIMESTAMP}      & Date+time: \texttt{YYYY-MM-DD HH:MM:SS} \\
+    \texttt{TEXT}           & Long text (no index by default) \\
+    \texttt{BLOB}           & Binary data (images, files) \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{6pt}
+  \begin{alertblock}{Use DECIMAL for Money -- Never FLOAT}
+    \texttt{FLOAT} and \texttt{DOUBLE} store approximate values using binary
+    floating-point.  This can introduce rounding errors:
+    \texttt{0.1 + 0.2} may not equal exactly \texttt{0.3}.  For monetary
+    amounts, always use \texttt{DECIMAL(p,s)} to guarantee exact
+    representation.
+  \end{alertblock}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{ALTER TABLE and DROP}
+  \begin{block}{Modifying an Existing Table}
+\begin{lstlisting}[style=sqlstyle]
+-- Add a column
+ALTER TABLE employee ADD email VARCHAR(255);
+
+-- Rename a column
+ALTER TABLE employee RENAME COLUMN email TO work_email;
+
+-- Change the data type of a column
+ALTER TABLE employee MODIFY COLUMN age TINYINT;
+
+-- Remove a column
+ALTER TABLE employee DROP COLUMN age;
+
+-- Remove an entire table (irreversible!)
+DROP TABLE employee;
+
+-- Remove the entire database with all its tables!
+DROP DATABASE supermarket;
+\end{lstlisting}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{ALTER TABLE} modifies the schema of an existing table
+          without (usually) losing its data.
+    \item \texttt{DROP TABLE} is \textbf{permanent} -- there is no undo in
+          SQL; always have a backup before running \texttt{DROP}.
+    \item Narrowing a column type (\texttt{MODIFY COLUMN}) can silently
+          truncate existing data that exceeds the new limit.
+  \end{itemize}
+\end{frame}

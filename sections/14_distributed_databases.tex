@@ -1,0 +1,171 @@
+\section{NoSQL and Distributed Databases}
+
+\begin{frame}{ACID -- The Gold Standard for Transactions}
+  \begin{block}{ACID Properties}
+    The four guarantees that define a \textbf{reliable database transaction} in classical relational
+    database systems:
+  \end{block}
+
+  \begin{itemize}
+    \item \textbf{Atomicity}: a transaction is \emph{all-or-nothing}. Either every single operation
+          within the transaction succeeds and is applied, or none of them are. There is no
+          intermediate, partially-applied state. Implemented via before-images and rollback.
+
+    \item \textbf{Consistency}: a transaction always brings the database from one \emph{valid state}
+          to another. All integrity constraints (primary keys, foreign keys, check constraints,
+          triggers) must hold before the transaction starts and after it ends. A transaction that
+          would violate a constraint is aborted entirely.
+
+    \item \textbf{Isolation}: concurrent transactions behave \emph{as if they were executed one at
+          a time} in some serial order. The intermediate, in-progress state of one transaction is
+          not visible to any other transaction. Implemented via locks or multi-version concurrency
+          control (MVCC).
+
+    \item \textbf{Durability}: once a transaction successfully commits, its changes are
+          \emph{permanent} -- even if the system crashes, loses power, or fails immediately
+          afterward. Implemented via the write-ahead transaction log (after-images) and checkpoints.
+  \end{itemize}
+
+  \medskip
+  MySQL, PostgreSQL, Oracle, and SQL Server are fully ACID-compliant. This makes them the default
+  choice for financial, healthcare, and any other domain where data correctness is non-negotiable.
+\end{frame}
+
+\begin{frame}{CAP Theorem}
+  \begin{block}{CAP Theorem (Eric Brewer, 2000)}
+    Any \textbf{distributed} data store can simultaneously guarantee \textbf{at most two} of the
+    following three properties:
+  \end{block}
+
+  \begin{itemize}
+    \item \textbf{Consistency (C)}: every read receives the \emph{most recent write}, or an error.
+          All nodes in the distributed system see the same data at the same time.
+
+    \item \textbf{Availability (A)}: every request sent to a non-failing node receives a
+          \emph{response} -- not necessarily the most recent data, but \emph{some} response
+          (no timeouts or errors due to the distributed nature).
+
+    \item \textbf{Partition Tolerance (P)}: the system continues to \emph{operate correctly} even
+          if some network messages between nodes are dropped, delayed, or the network splits
+          into isolated segments (a \emph{network partition}).
+  \end{itemize}
+
+  \begin{alertblock}{The Catch -- Partitions Always Happen}
+    In any real distributed system deployed across multiple machines or data centres, network
+    partitions are not hypothetical -- they \emph{will} happen at some point (network cables fail,
+    switches reboot, data centres lose connectivity). Therefore, \textbf{Partition Tolerance is not
+    optional} in practice. Every distributed database \emph{must} tolerate partitions, meaning the
+    real trade-off is always between \textbf{Consistency} and \textbf{Availability}.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{CAP Theorem -- Practical Implications}
+  When a network partition occurs, the distributed system must make a choice:
+
+  \begin{itemize}
+    \item \textbf{Sacrifice Availability, maintain Consistency (CP)}: cancel or reject operations
+          that cannot be guaranteed to be consistent across all nodes. The system returns an error
+          rather than a potentially stale answer. Example: MongoDB (in default configuration)
+          refuses writes to a partition-isolated node.
+
+    \item \textbf{Sacrifice Consistency, maintain Availability (AP)}: continue serving requests
+          from all nodes even if some return stale (out-of-date) data. The system will
+          \emph{eventually} converge once the partition heals. Example: Cassandra continues to
+          serve reads and writes from all nodes; reconciliation happens later.
+  \end{itemize}
+
+  \medskip
+  \textbf{Classification of common database systems:}
+
+  \begin{tabular}{@{}p{3.5cm}p{4cm}p{3.5cm}@{}}
+    \toprule
+    \textbf{Category} & \textbf{Examples} & \textbf{Trade-off} \\
+    \midrule
+    CA (no partition tolerance) & MySQL, PostgreSQL, Oracle & Ideal for single-node; not truly distributed \\
+    CP (consistent, part.-tolerant) & MongoDB, HBase, Zookeeper & May reject requests during partition \\
+    AP (available, part.-tolerant) & DynamoDB, CouchDB, Cassandra & May return stale data \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{What is NoSQL?}
+  \begin{block}{Definition}
+    \textbf{NoSQL} (``Not only SQL'') refers to a broad class of database management systems
+    designed for specific use cases that are not well-served by traditional relational databases.
+    They typically sacrifice strict ACID compliance in exchange for horizontal scalability, schema
+    flexibility, or specialised data models.
+  \end{block}
+
+  \textbf{Why NoSQL emerged -- limitations of relational DBs at scale:}
+  \begin{itemize}
+    \item \textbf{Horizontal scalability}: relational databases are hard to shard across hundreds
+          of commodity servers. NoSQL databases are designed from the ground up to distribute.
+    \item \textbf{Schema flexibility}: in fast-moving web applications, data structures change
+          frequently. Relational schemas require \texttt{ALTER TABLE} migrations; document stores
+          accept any JSON structure.
+    \item \textbf{High write throughput}: logging millions of IoT events or user actions per second
+          would overwhelm a single relational DB; distributed NoSQL clusters handle this natively.
+    \item \textbf{Specialised data models}: graphs, documents, and key-value pairs map very poorly
+          to flat relational tables.
+  \end{itemize}
+
+  \begin{examples}{Note on the name}
+    ``Not only SQL'' is the accurate interpretation. Many NoSQL databases actually support
+    SQL-like query languages (e.g.\ Cassandra's CQL, Google Spanner uses SQL). The defining
+    characteristic is the departure from the strict relational model and ACID compliance.
+  \end{examples}
+\end{frame}
+
+\begin{frame}{BASE -- The NoSQL Alternative to ACID}
+  \begin{block}{BASE Properties}
+    Most NoSQL databases follow the \textbf{BASE} model instead of ACID. BASE deliberately
+    relaxes consistency guarantees in exchange for availability and performance:
+  \end{block}
+
+  \begin{itemize}
+    \item \textbf{Basically Available (BA)}: the system is \emph{always available} to accept
+          requests. All users can access data concurrently at any time, without waiting for locks
+          or transactions to complete. The system prioritises responding to every request over
+          guaranteeing the freshness of the response.
+
+    \item \textbf{Soft State (S)}: the state of the system may change \emph{over time even without
+          new user input}, as replication and consistency updates propagate across nodes in the
+          background. Data may be transient -- different nodes may hold different versions of the
+          same record temporarily.
+
+    \item \textbf{Eventually Consistent (E)}: after all updates have stopped and sufficient
+          propagation time has passed, all replicas \emph{will converge} to the same value.
+          The system does NOT guarantee that all nodes see identical data at the same instant --
+          only that they will agree eventually.
+  \end{itemize}
+
+  \begin{alertblock}{When is BASE acceptable?}
+    Social media timelines, product catalogues, recommendation engines, shopping carts --
+    short-lived inconsistency is tolerable. Bank account balances, medical records, payment
+    systems -- ACID is required. Choose your model based on the business requirements.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{ACID vs.\ BASE -- Comparison}
+  \begin{tabular}{@{}p{3.2cm}p{4cm}p{4cm}@{}}
+    \toprule
+    \textbf{Property} & \textbf{ACID} & \textbf{BASE} \\
+    \midrule
+    Primary focus   & Data correctness and integrity & Availability and performance \\[4pt]
+    Consistency     & Guaranteed immediately after every commit & Eventually consistent (may lag) \\[4pt]
+    Transactions    & Full ACID transactions with rollback & Usually none, or limited / per-document \\[4pt]
+    State during ops & Always consistent; invalid states impossible & Soft state; temporary inconsistency is expected \\[4pt]
+    Scalability     & Vertical (scale up: more CPU/RAM) & Horizontal (scale out: more servers) \\[4pt]
+    Use cases       & Finance, ERP, healthcare, banking & Social media, IoT, event logging, caches \\[4pt]
+    Examples        & MySQL, PostgreSQL, Oracle, SQL Server & MongoDB, Cassandra, Redis, DynamoDB \\
+    \bottomrule
+  \end{tabular}
+
+  \medskip
+  \begin{block}{Practical takeaway}
+    These are not competing philosophies where one is ``better'' -- they are different tools for
+    different problems. Many modern architectures use \textbf{both}: a relational ACID database for
+    financial and transactional data, and a NoSQL BASE store for high-throughput event data or
+    caching.
+  \end{block}
+\end{frame}

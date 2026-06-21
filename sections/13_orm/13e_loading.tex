@@ -1,0 +1,31 @@
+% ----------------------------------------------------------
+\begin{frame}[fragile]{ORM -- Lazy vs Eager Loading}
+  When an \texttt{Employee} entity has a \texttt{@ManyToOne} link to
+  \texttt{Department}, the ORM must decide \emph{when} to load the related
+  object.
+
+  \begin{block}{Two loading strategies}
+    \begin{itemize}
+      \item \textbf{EAGER loading}: the related entity is loaded
+            \emph{immediately} together with the parent, always via a
+            \texttt{JOIN}. Simple but can load far more data than needed.
+      \item \textbf{LAZY loading}: the related entity is loaded
+            \emph{on first access} (a second query is issued only when
+            \texttt{employee.getDepartment()} is called). Default for
+            \texttt{@OneToMany} and \texttt{@ManyToMany} in JPA.
+    \end{itemize}
+  \end{block}
+
+  \begin{lstlisting}[style=sqlstyle, language=Java]
+@ManyToOne(fetch = FetchType.LAZY)   // default for *ToOne is EAGER
+@JoinColumn(name = "department_id")
+private Department department;
+  \end{lstlisting}
+
+  \begin{alertblock}{Lazy loading and the N+1 problem}
+    LAZY loading is the root cause of the N+1 query problem in ORM frameworks.
+    When iterating over a list of employees and accessing \texttt{getDepartment()}
+    inside the loop, each call fires a separate SQL query.
+    Fix: use a \texttt{JOIN FETCH} query or enable eager loading for that use case.
+  \end{alertblock}
+\end{frame}

@@ -1,0 +1,28 @@
+% ----------------------------------------------------------
+\begin{frame}[fragile]{Spring Data JPA -- Repository Pattern}
+  \textbf{Spring Data JPA} builds on top of JPA/Hibernate and eliminates almost
+  all boilerplate CRUD code. You define an interface; Spring generates the
+  implementation at runtime.
+
+  \begin{lstlisting}[style=sqlstyle, language=Java]
+// Extend JpaRepository<EntityType, PrimaryKeyType>
+public interface EmployeeRepository
+    extends JpaRepository<Employee, Long> {
+
+    // Spring derives the SQL from the method name:
+    List<Employee> findByLastName(String lastName);
+    List<Employee> findByDepartmentNameAndAgeGreaterThan(
+        String deptName, int age);
+
+    // Use JPQL for complex queries
+    @Query("SELECT e FROM Employee e WHERE e.salary > :min")
+    List<Employee> findHighEarners(@Param("min") double minSalary);
+}
+  \end{lstlisting}
+
+  \begin{block}{What Spring provides for free}
+    \texttt{save(entity)}, \texttt{findById(id)}, \texttt{findAll()},
+    \texttt{deleteById(id)}, \texttt{count()}, \texttt{existsById(id)} --
+    all implemented automatically, all using parameterised queries internally.
+  \end{block}
+\end{frame}

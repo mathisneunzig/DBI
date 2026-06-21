@@ -1,0 +1,62 @@
+% ----------------------------------------------------------
+\begin{frame}[fragile]{Constraints}
+  \begin{block}{Defining Integrity Rules at Column and Table Level}
+\begin{lstlisting}[style=sqlstyle]
+CREATE TABLE product (
+    id       INT AUTO_INCREMENT,
+    name     VARCHAR(100) NOT NULL,
+    email    VARCHAR(255) UNIQUE,
+    price    DECIMAL(10,2) DEFAULT 0.00,
+    brand_id INT,
+    PRIMARY KEY (id),
+    FOREIGN KEY (brand_id) REFERENCES brand(id)
+        ON DELETE SET NULL
+        ON UPDATE CASCADE,
+    CHECK (price >= 0)
+);
+\end{lstlisting}
+  \end{block}
+
+  \begin{block}{Referential Actions}
+    \begin{itemize}
+      \item \texttt{ON DELETE CASCADE} -- if the referenced brand is
+            deleted, \textbf{all its products are also deleted automatically}.
+      \item \texttt{ON DELETE SET NULL} -- if the brand is deleted,
+            \texttt{brand\_id} becomes \texttt{NULL} (preserves products).
+      \item \texttt{ON UPDATE CASCADE} -- if the brand's primary key
+            changes, the foreign key in every product row is updated
+            automatically.
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{Named Constraints and ALTER TABLE ADD CONSTRAINT}
+  \begin{block}{Naming Constraints for Easier Management}
+\begin{lstlisting}[style=sqlstyle]
+CREATE TABLE employee (
+    id    INT,
+    email VARCHAR(255),
+    age   INT,
+    CONSTRAINT pk_employee PRIMARY KEY (id),
+    CONSTRAINT uq_email    UNIQUE (email),
+    CONSTRAINT chk_age     CHECK (age >= 18)
+);
+
+-- Add a constraint to an existing table
+ALTER TABLE employee
+ADD CONSTRAINT fk_dept
+FOREIGN KEY (dept_id) REFERENCES department(id);
+
+-- Remove a named constraint
+ALTER TABLE employee DROP CONSTRAINT chk_age;
+\end{lstlisting}
+  \end{block}
+
+  \begin{block}{Why Name Constraints?}
+    Named constraints make error messages more readable
+    (``Duplicate entry violates constraint \texttt{uq\_email}'' vs.\
+    a generic cryptic error) and make it possible to drop a specific
+    constraint by name without recreating the entire table.
+  \end{block}
+\end{frame}

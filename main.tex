@@ -1,0 +1,141 @@
+\documentclass[10pt]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{eurosym}
+\usepackage{tikz}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+
+% SQL / code listing style
+\lstdefinestyle{sqlstyle}{
+  language=SQL,
+  basicstyle=\small\ttfamily,
+  keywordstyle=\color{blue!80!black}\bfseries,
+  commentstyle=\color{gray!70}\itshape,
+  stringstyle=\color{orange!80!black},
+  breaklines=true,
+  showstringspaces=false,
+  frame=single,
+  backgroundcolor=\color{gray!10},
+  rulecolor=\color{gray!40},
+  tabsize=2,
+}
+
+% Relational algebra shorthand commands
+\newcommand{\rasel}{\sigma}
+\newcommand{\raproj}{\pi}
+\newcommand{\raren}{\rho}
+\newcommand{\rajoin}{\bowtie}
+\newcommand{\ralsem}{\ltimes}
+\newcommand{\rarsem}{\rtimes}
+
+% Venn diagram for SQL joins: \vennjoin{leftFill}{centerFill}{rightFill}
+% Arguments are 1 (fill region) or 0 (leave empty)
+\newcommand{\vennjoin}[3]{%
+  \begin{tikzpicture}[scale=0.48, baseline=-0.5ex]
+    \ifnum#1=1
+      \begin{scope}[even odd rule]
+        \clip (-0.65,0) circle (1) (0.65,0) circle (1);
+        \fill[blue!30] (-0.65,0) circle (1);
+      \end{scope}
+    \fi
+    \ifnum#2=1
+      \begin{scope}
+        \clip (-0.65,0) circle (1);
+        \fill[blue!30] (0.65,0) circle (1);
+      \end{scope}
+    \fi
+    \ifnum#3=1
+      \begin{scope}[even odd rule]
+        \clip (0.65,0) circle (1) (-0.65,0) circle (1);
+        \fill[blue!30] (0.65,0) circle (1);
+      \end{scope}
+    \fi
+    \draw[thick] (-0.65,0) circle (1);
+    \draw[thick] (0.65,0) circle (1);
+    \node[font=\tiny\bfseries] at (-1.5,0) {A};
+    \node[font=\tiny\bfseries] at (1.5,0) {B};
+  \end{tikzpicture}%
+}
+
+\title[Databases I]{Databases I}
+\subtitle{Semester 3 (Theory)}
+\author[Neunzig, M.]{Mathis Neunzig}
+\institute[DHBW Mosbach]{DHBW Mosbach}
+\date[Autumn 2026]{Autumn 2026}
+
+\AtBeginSection[]{
+  \begin{frame}
+    \frametitle{Table of Contents}
+    \tableofcontents[currentsection]
+  \end{frame}
+}
+
+\begin{document}
+
+\frame{\titlepage}
+
+\begin{frame}
+  \frametitle{Table of Contents}
+  \tableofcontents
+\end{frame}
+
+\input{sections/00_introduction}
+\input{sections/01_database_systems}
+\input{sections/02_data_models}
+\input{sections/03_relational_databases}
+\input{sections/04_relational_algebra/04a_overview}
+\input{sections/04_relational_algebra/04b_set_operators}
+\input{sections/04_relational_algebra/04c_unary_operators}
+\input{sections/04_relational_algebra/04d_joins}
+\input{sections/04_relational_algebra/04e_laws}
+\input{sections/05_normal_forms/05a_motivation}
+\input{sections/05_normal_forms/05b_functional_dependencies}
+\input{sections/05_normal_forms/05c_armstrong_keys}
+\input{sections/05_normal_forms/05d_1nf_2nf}
+\input{sections/05_normal_forms/05e_3nf_bcnf}
+\input{sections/05_normal_forms/05f_higher_forms}
+\input{sections/05_normal_forms/05g_algorithms}
+\input{sections/06_database_design}
+\input{sections/07_tools/07a_xampp}
+\input{sections/07_tools/07b_phpmyadmin}
+\input{sections/07_tools/07c_mysql_workbench}
+\input{sections/07_tools/07d_dbeaver}
+\input{sections/07_tools/07e_docker}
+\input{sections/08_sql/08_intro}
+\input{sections/08_sql/08a_select_basic}
+\input{sections/08_sql/08b_select_where}
+\input{sections/08_sql/08c_select_aggregation}
+\input{sections/08_sql/08d_subqueries}
+\input{sections/08_sql/08e_ra_sql}
+\input{sections/08_sql/08f_joins}
+\input{sections/08_sql/08g_insert_update_delete}
+\input{sections/08_sql/08h_create_alter}
+\input{sections/08_sql/08i_constraints}
+\input{sections/08_sql/08j_views_triggers}
+\input{sections/08_sql/08k_dcl}
+\input{sections/09_backup_recovery}
+\input{sections/10_concurrency}
+\input{sections/11_sql_optimization/11a_explain}
+\input{sections/11_sql_optimization/11b_indexes}
+\input{sections/11_sql_optimization/11c_antipatterns}
+\input{sections/12_security}
+\input{sections/13_orm/13a_intro}
+\input{sections/13_orm/13b_why_orm}
+\input{sections/13_orm/13c_jpa}
+\input{sections/13_orm/13d_spring_data}
+\input{sections/13_orm/13e_loading}
+\input{sections/14_distributed_databases}
+
+\end{document}

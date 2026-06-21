@@ -1,0 +1,116 @@
+% ----------------------------------------------------------
+\begin{frame}{Relational Algebra to SQL -- Unary Operators}
+  The table below maps each unary relational algebra operator to its SQL
+  equivalent.  Understanding this mapping helps you translate between the
+  formal theory and practical query writing.
+
+  \vspace{4pt}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    \textbf{RA Operation} & \textbf{RA Syntax} & \textbf{SQL Equivalent} \\
+    \midrule
+    Restriction      & $\sigma_C(R)$               & \texttt{SELECT * FROM R WHERE C} \\
+    Projection       & $\pi_A(R)$                  & \texttt{SELECT A FROM R} \\
+    Rename (table)   & $\rho_N(R)$                 & \texttt{\ldots{} FROM R AS N} \\
+    Deduplication    & $\delta(\pi_A(R))$           & \texttt{SELECT DISTINCT A FROM R} \\
+    Aggregation      & $\gamma_{A,\,\text{SUM}(B)}(R)$ & \texttt{SELECT A, SUM(B) FROM R GROUP BY A} \\
+    Sorting          & $\tau_{A\,\text{DESC}}(R)$  & \texttt{SELECT * FROM R ORDER BY A DESC} \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{6pt}
+  \begin{block}{Key Insight}
+    Restriction ($\sigma$) selects \emph{rows}; projection ($\pi$) selects
+    \emph{columns}.  In SQL both ideas are combined into a single
+    \texttt{SELECT \ldots FROM \ldots WHERE} statement.
+  \end{block}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Relational Algebra to SQL -- Binary Operators}
+  \vspace{4pt}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    \textbf{Operation}   & \textbf{RA Syntax}       & \textbf{SQL Equivalent} \\
+    \midrule
+    Union            & $R_1 \cup R_2$           & \texttt{SELECT \ldots{} UNION SELECT \ldots} \\
+    Intersection     & $R_1 \cap R_2$           & \texttt{SELECT \ldots{} INTERSECT SELECT \ldots} \\
+    Difference       & $R_1 \setminus R_2$      & \texttt{SELECT \ldots{} EXCEPT SELECT \ldots} \\
+    Cartesian Product & $R_1 \times R_2$        & \texttt{SELECT * FROM R1, R2} \\
+    Division         & $R_1 \div R_2$           & No direct equivalent (use \texttt{NOT EXISTS}) \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{6pt}
+  \begin{block}{Notes}
+    \begin{itemize}
+      \item \texttt{UNION} removes duplicates by default; use
+            \texttt{UNION ALL} to keep them (faster, but includes
+            duplicates).
+      \item \texttt{INTERSECT} and \texttt{EXCEPT} are not available in all
+            DBMSs (MySQL added \texttt{INTERSECT} / \texttt{EXCEPT} only in
+            version~8.0.31).
+      \item The Cartesian product (\texttt{FROM R1, R2} without a
+            \texttt{WHERE} join condition) returns every combination of rows
+            -- usually a mistake in production queries.
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Relational Algebra to SQL -- Join Operators}
+  \vspace{4pt}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    \textbf{Operation}      & \textbf{RA}               & \textbf{SQL} \\
+    \midrule
+    Natural Join        & $R_1 \bowtie R_2$         & \texttt{R1 NATURAL JOIN R2} \\
+    Inner Join          & $R_1 \bowtie_C R_2$       & \texttt{R1 INNER JOIN R2 ON C} \\
+    Left Outer Join     & $R_1 \bowtie_L R_2$       & \texttt{R1 LEFT JOIN R2 ON C} \\
+    Right Outer Join    & $R_1 \bowtie_R R_2$       & \texttt{R1 RIGHT JOIN R2 ON C} \\
+    Full Outer Join     & $R_1 \bowtie_{LR} R_2$    & \texttt{LEFT JOIN UNION RIGHT JOIN} \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{6pt}
+  \begin{block}{Choosing the Right Join}
+    \begin{itemize}
+      \item Use \texttt{INNER JOIN} when you only want rows with a
+            match on \textbf{both} sides.
+      \item Use \texttt{LEFT JOIN} when you want all rows from the left
+            table, with \texttt{NULL} for unmatched right-side columns.
+      \item MySQL does not support \texttt{FULL OUTER JOIN} directly;
+            emulate it with \texttt{LEFT JOIN UNION RIGHT JOIN}.
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{SELECT Execution Order}
+  SQL clauses are \textbf{written} in one order but \textbf{executed} in a
+  completely different order.  Internalising this is the key to writing
+  correct, efficient queries.
+
+  \begin{block}{Execution Steps (in order)}
+    \begin{enumerate}
+      \item \textbf{FROM} (and JOINs) -- identify and combine source tables
+      \item \textbf{WHERE} -- filter individual rows
+      \item \textbf{GROUP BY} -- collapse rows into groups
+      \item \textbf{HAVING} -- filter groups
+      \item \textbf{SELECT} -- compute output expressions and assign aliases
+      \item \textbf{DISTINCT} -- remove duplicate rows
+      \item \textbf{UNION / INTERSECT / EXCEPT} -- combine result sets
+      \item \textbf{ORDER BY} -- sort the final result
+      \item \textbf{LIMIT / OFFSET} -- restrict the output size
+    \end{enumerate}
+  \end{block}
+
+  \begin{alertblock}{Why Does This Matter?}
+    \begin{itemize}
+      \item Column aliases (assigned at step~5) \textbf{cannot} be used in
+            \texttt{WHERE} (step~2) or \texttt{HAVING} (step~4).
+      \item If a subquery is present, the entire execution order restarts
+            independently for each subquery.
+    \end{itemize}
+  \end{alertblock}
+\end{frame}

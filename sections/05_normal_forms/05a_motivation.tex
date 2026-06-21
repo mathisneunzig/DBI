@@ -1,0 +1,85 @@
+\section{Normal Forms}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{Why Normal Forms?}
+  \begin{alertblock}{The Problem: Poorly Designed Relations}
+    A na\"ively designed table that stores ``everything in one place'' leads to a
+    range of systematic problems collectively called \textbf{anomalies}.
+  \end{alertblock}
+
+  \begin{itemize}
+    \item \textbf{Data Redundancy:} The same fact (e.g.\ an artist's debut year)
+          is stored in every row that mentions that artist.  This wastes storage
+          and, more importantly, opens the door to inconsistency.
+    \item \textbf{Update Anomalies:} If a fact is stored in $n$ places and we
+          update only $k < n$ of them, the database becomes contradictory.
+    \item \textbf{Insertion Anomalies:} We cannot record a new fact without also
+          supplying unrelated data.  Example: we cannot add a new artist until
+          that artist releases an album.
+    \item \textbf{Deletion Anomalies:} Deleting a record accidentally removes
+          other unrelated facts.  Example: deleting the last album of an artist
+          also deletes all information about that artist.
+    \item \textbf{Complex Queries:} Denormalised tables often require intricate
+          SQL (self-joins, aggregations, deduplication) just to produce correct
+          results for simple questions.
+  \end{itemize}
+
+  \begin{block}{A Problematic Table}
+    \small
+    \begin{tabular}{lllllll}
+      \hline
+      \textbf{ID} & \textbf{Title} & \textbf{Songs} & \textbf{Main Artist} & \textbf{Debut} & \textbf{Genre} & \textbf{Release} \\
+      \hline
+      A100 & Midnights (3am Ed.) & Would've\ldots; Karma & Taylor Swift & 2006 & Pop & 2022 \\
+      A101 & 1989 (Taylor's Ver.) & Shake It Off; Blank Space & Taylor Swift & 2006 & Pop & 2023 \\
+      \hline
+    \end{tabular}
+    \vspace{4pt}
+
+    Two immediate violations: (1) multiple songs are packed into a single cell
+    (\emph{atomicity violated}); (2) \texttt{Debut} repeats for every album of
+    the same artist (\emph{redundancy}).
+  \end{block}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{The Solution: Normal Forms}
+  \begin{block}{What Are Normal Forms?}
+    \textbf{Normal forms (NF)} are a series of progressive rules for organising
+    relation schemas.  Each rule eliminates a specific class of redundancy or
+    dependency problem.
+  \end{block}
+
+  \begin{columns}[t]
+    \begin{column}{0.48\textwidth}
+      \textbf{Goal}
+      \begin{itemize}
+        \item Reduce redundancy and unnecessary attribute dependencies
+        \item Eliminate update, insertion, and deletion anomalies
+        \item Produce a clean, maintainable schema
+      \end{itemize}
+
+      \vspace{6pt}
+      \textbf{Key Insight}\\
+      Normal forms are \emph{cumulative}: a relation in $n$NF must also satisfy
+      all lower normal forms.  There is no skipping.
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \textbf{Hierarchy of Normal Forms}
+      \begin{itemize}
+        \item Commonly used: 1NF, 2NF, 3NF, BCNF
+        \item Less common: 4NF, 5NF
+        \item Rarely used: 6NF, EKNF, ETNF, DKNF
+      \end{itemize}
+
+      \vspace{6pt}
+      \textbf{Two Key Algorithms}
+      \begin{itemize}
+        \item \textbf{Synthesis Algorithm} $\to$ 3NF\\
+              (lossless \emph{and} dependency-preserving)
+        \item \textbf{Decomposition Algorithm} $\to$ BCNF\\
+              (lossless, but may not preserve all FDs)
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}

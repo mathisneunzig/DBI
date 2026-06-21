@@ -1,0 +1,25 @@
+\begin{frame}{ORM -- Why Use It?}
+  \begin{itemize}
+    \item \textbf{Built-in SQL injection protection}: ORMs use parameterised queries internally --
+          SQL is \emph{never} constructed by string concatenation. Correctly used, an ORM makes
+          SQL injection structurally impossible.
+    \item \textbf{Developer productivity}: instead of writing repetitive \texttt{INSERT},
+          \texttt{UPDATE}, \texttt{SELECT} boilerplate, you call methods like
+          \texttt{repository.save(employee)} or \texttt{repository.findById(42)}.
+    \item \textbf{Database portability}: the ORM abstracts away DBMS-specific SQL dialects.
+          Switching from MySQL to PostgreSQL often requires only a configuration change, not
+          rewriting queries.
+    \item \textbf{Schema-as-code}: the database schema is defined as Java/Python/C\# classes.
+          Changes can be tracked in version control alongside application code; migrations can be
+          generated automatically.
+    \item \textbf{Relationships handled automatically}: \texttt{@ManyToOne}, \texttt{@OneToMany}
+          annotations define join behaviour; the ORM generates the correct JOIN queries
+          transparently.
+  \end{itemize}
+
+  \begin{alertblock}{Trade-offs}
+    ORMs can generate suboptimal or overly complex SQL for non-trivial queries. For
+    performance-critical operations (bulk inserts, complex aggregations), dropping down to
+    \textbf{native SQL} through the ORM's escape hatch is common and recommended.
+  \end{alertblock}
+\end{frame}

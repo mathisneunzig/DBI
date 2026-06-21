@@ -1,0 +1,56 @@
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{DBeaver -- Universal Database Client}
+
+  \begin{block}{What Is DBeaver?}
+    \textbf{DBeaver} is a free, open-source, cross-platform database client that supports
+    virtually every database system through JDBC drivers: MySQL, MariaDB, PostgreSQL,
+    SQLite, Oracle, SQL Server, MongoDB, and many more.\\[0.3em]
+    Download: \texttt{dbeaver.io} (Community Edition is fully free)
+  \end{block}
+
+  \begin{block}{Key Features}
+    \begin{itemize}
+      \item \textbf{Universal connectivity}: one tool for all databases -- no need to
+            switch between MySQL Workbench, pgAdmin, and others
+      \item \textbf{SQL editor}: syntax highlighting, auto-completion, query history,
+            script execution with results shown inline
+      \item \textbf{ER diagram viewer}: automatically reverse-engineers a schema into
+            an entity-relationship diagram
+      \item \textbf{Data editor}: browse and edit table contents visually, with
+            filtering and sorting
+      \item \textbf{Data export/import}: CSV, JSON, SQL dump, Excel -- all built in
+      \item \textbf{Query profiling}: built-in \texttt{EXPLAIN} plan viewer with a
+            graphical representation of the execution plan
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}
+  \frametitle{DBeaver -- Connecting to MySQL}
+
+  \begin{block}{Setting Up a Connection}
+    \begin{enumerate}
+      \item Open DBeaver and click \textbf{``New Database Connection''} (plug icon)
+      \item Select \textbf{MySQL} from the driver list and click Next
+      \item Enter the connection details:
+        \begin{itemize}
+          \item \textbf{Host}: \texttt{localhost}
+          \item \textbf{Port}: \texttt{3306}
+          \item \textbf{Username}: \texttt{root}
+          \item \textbf{Password}: \textit{(empty for XAMPP default)}
+        \end{itemize}
+      \item Click \textbf{Test Connection} -- DBeaver downloads the JDBC driver
+            automatically if not already installed
+      \item Click \textbf{Finish}
+    \end{enumerate}
+  \end{block}
+
+  \begin{examples}{Why DBeaver over phpMyAdmin?}
+    DBeaver is a \emph{native desktop application} -- it is faster, supports keyboard
+    shortcuts, handles large result sets better, and works offline without a running
+    Apache web server. For writing and testing SQL queries, most developers prefer it
+    over browser-based tools.
+  \end{examples}
+\end{frame}

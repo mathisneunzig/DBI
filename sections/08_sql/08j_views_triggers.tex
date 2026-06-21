@@ -1,0 +1,35 @@
+% ----------------------------------------------------------
+\begin{frame}[fragile]{VIEW, TRIGGER, PROCEDURE \textbf{(!)}}
+  \begin{block}{Advanced Database Objects}
+\begin{lstlisting}[style=sqlstyle]
+-- VIEW: a virtual table based on a SELECT
+CREATE VIEW expensive_products AS
+SELECT * FROM product WHERE price > 10;
+DROP VIEW expensive_products;
+
+-- TRIGGER: automatically execute SQL on a data change
+CREATE TRIGGER set_default_bbd
+BEFORE INSERT ON stock
+FOR EACH ROW
+SET NEW.best_before_date = DATE_ADD(NOW(), INTERVAL 30 DAY);
+
+-- STORED PROCEDURE: a reusable, named SQL block
+DELIMITER //
+CREATE PROCEDURE raise_prices(IN pct DECIMAL(5,2))
+BEGIN
+    UPDATE product SET price = price * (1 + pct/100);
+END//
+DELIMITER ;
+CALL raise_prices(10.0);
+\end{lstlisting}
+  \end{block}
+
+  \begin{itemize}
+    \item A \textbf{VIEW} simplifies complex queries and can restrict which
+          columns users see (a basic access-control technique).
+    \item A \textbf{TRIGGER} enforces business rules automatically without
+          relying on application code.
+    \item A \textbf{STORED PROCEDURE} encapsulates reusable logic server-side,
+          reducing network round-trips and duplicated application code.
+  \end{itemize}
+\end{frame}
