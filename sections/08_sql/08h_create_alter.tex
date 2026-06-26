@@ -1,101 +1,199 @@
 % ----------------------------------------------------------
 \begin{frame}[fragile]{CREATE DATABASE and CREATE TABLE}
-  \begin{block}{Defining the Schema}
-\begin{lstlisting}[style=sqlstyle]
--- Create a new database and switch to it
-CREATE DATABASE supermarket;
-USE supermarket;
+  \begin{lstlisting}[style=sqlstyle]
+-- Create a new database
+CREATE DATABASE music_db;
+USE music_db;
 
--- Create a table with various constraints
-CREATE TABLE employee (
-    id       INT AUTO_INCREMENT,
-    username VARCHAR(50)  NOT NULL UNIQUE,
-    email    VARCHAR(255),
-    age      INT,
+-- Create a table with common constraint types
+CREATE TABLE Artist (
+    id      INT          AUTO_INCREMENT,
+    name    VARCHAR(150) NOT NULL,
+    country CHAR(2),
+    founded YEAR,
     PRIMARY KEY (id),
-    CHECK (age >= 18)
+    UNIQUE (name)
 );
-\end{lstlisting}
-  \end{block}
+  \end{lstlisting}
 
   \begin{itemize}
-    \item \texttt{AUTO\_INCREMENT}: MySQL automatically assigns the next
-          integer value when a row is inserted without specifying this
-          column.
-    \item \texttt{NOT NULL}: the column cannot be omitted or explicitly
-          set to \texttt{NULL} -- the insert is rejected if it is.
-    \item \texttt{UNIQUE}: all values in the column must be distinct across
-          all rows.  \texttt{NULL} is allowed (and multiple \texttt{NULL}s
-          are permitted) unless combined with \texttt{NOT NULL}.
-    \item \texttt{CHECK}: a boolean expression that every inserted or
-          updated row must satisfy.
+    \item \texttt{AUTO\_INCREMENT}: DBMS assigns the next integer automatically on insert.
+    \item \texttt{NOT NULL}: the column must always contain a value -- \texttt{NULL} is rejected.
+    \item \texttt{UNIQUE}: all non-null values in the column must be distinct across all rows.
+    \item \texttt{PRIMARY KEY}: implies \texttt{NOT NULL + UNIQUE} and creates a clustered index.
   \end{itemize}
 \end{frame}
 
 % ----------------------------------------------------------
-\begin{frame}{Data Types}
-  Choosing the correct data type saves storage, improves performance, and
-  prevents data integrity errors.
+\begin{frame}[fragile]{CREATE TABLE -- Full Syntax with All Options}
+  \begin{lstlisting}[style=sqlstyle]
+CREATE TABLE Track (
+    id           INT           AUTO_INCREMENT,
+    title        VARCHAR(200)  NOT NULL,
+    duration_sec INT           NOT NULL DEFAULT 0,
+    track_no     TINYINT       UNSIGNED,
+    lyrics       TEXT,
+    created_at   TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+    album_id     INT           NOT NULL,
+    PRIMARY KEY  (id),
+    CONSTRAINT fk_track_album
+        FOREIGN KEY (album_id) REFERENCES Album(id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT chk_duration CHECK (duration_sec >= 0)
+);
+  \end{lstlisting}
+
+  \begin{block}{Key Elements}
+    \begin{itemize}
+      \item \texttt{DEFAULT}: value used when column is omitted from \texttt{INSERT}.
+      \item \texttt{UNSIGNED}: non-negative integers only (doubles the positive range).
+      \item Named constraints (\texttt{CONSTRAINT name}) make error messages readable.
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Data Types -- Overview}
+  Choosing the correct data type saves storage, improves performance, and prevents integrity errors.
 
   \vspace{4pt}
-  \begin{tabular}{@{}ll@{}}
+  \begin{tabularx}{\linewidth}{@{}llX@{}}
     \toprule
-    \textbf{Type}          & \textbf{Description} \\
+    \textbf{Category} & \textbf{Type} & \textbf{Description / Notes} \\
     \midrule
-    \texttt{CHAR(n)}        & Fixed-length string of exactly $n$ characters \\
-    \texttt{VARCHAR(n)}     & Variable-length string, max $n$ characters \\
-    \texttt{BOOLEAN}        & 0 = false, any other value = true \\
-    \texttt{INT}            & Integer ($-2^{31}$ to $2^{31}-1$) \\
-    \texttt{DECIMAL(p,s)}   & Exact decimal: $p$ total digits, $s$ after decimal \\
-    \texttt{FLOAT / DOUBLE} & Approximate floating-point (avoid for money!) \\
-    \texttt{DATE}           & Date: \texttt{YYYY-MM-DD} \\
-    \texttt{TIME}           & Time: \texttt{HH:MM:SS} \\
-    \texttt{TIMESTAMP}      & Date+time: \texttt{YYYY-MM-DD HH:MM:SS} \\
-    \texttt{TEXT}           & Long text (no index by default) \\
-    \texttt{BLOB}           & Binary data (images, files) \\
+    String  & \texttt{CHAR(n)}        & Fixed-length; always pads to $n$ chars \\
+            & \texttt{VARCHAR(n)}     & Variable-length; max $n$ chars \\
+            & \texttt{TEXT}           & Long text; no index by default \\
+    \midrule
+    Numeric & \texttt{TINYINT}        & 1 byte; $-128$ to $127$ (or $0$--$255$ UNSIGNED) \\
+            & \texttt{INT}            & 4 bytes; $\pm 2$ billion \\
+            & \texttt{BIGINT}         & 8 bytes; large IDs, timestamps \\
+            & \texttt{DECIMAL(p,s)}   & Exact decimal; $p$ digits, $s$ after point \\
+            & \texttt{FLOAT/DOUBLE}   & Approximate; \textbf{avoid for money!} \\
+    \midrule
+    Date    & \texttt{DATE}           & \texttt{YYYY-MM-DD} \\
+            & \texttt{TIMESTAMP}      & \texttt{YYYY-MM-DD HH:MM:SS} \\
+            & \texttt{YEAR}           & 4-digit year only \\
+    \midrule
+    Other   & \texttt{BOOLEAN}        & Stored as \texttt{TINYINT(1)} in MySQL \\
+            & \texttt{BLOB}           & Binary data (images, files) \\
+            & \texttt{ENUM(...)}      & Fixed set of allowed string values \\
     \bottomrule
-  \end{tabular}
-
-  \vspace{6pt}
-  \begin{alertblock}{Use DECIMAL for Money -- Never FLOAT}
-    \texttt{FLOAT} and \texttt{DOUBLE} store approximate values using binary
-    floating-point.  This can introduce rounding errors:
-    \texttt{0.1 + 0.2} may not equal exactly \texttt{0.3}.  For monetary
-    amounts, always use \texttt{DECIMAL(p,s)} to guarantee exact
-    representation.
-  \end{alertblock}
+  \end{tabularx}
 \end{frame}
 
 % ----------------------------------------------------------
-\begin{frame}[fragile]{ALTER TABLE and DROP}
-  \begin{block}{Modifying an Existing Table}
-\begin{lstlisting}[style=sqlstyle]
--- Add a column
-ALTER TABLE employee ADD email VARCHAR(255);
+\begin{frame}[fragile]{Data Types -- Important Gotchas}
+  \begin{alertblock}{Use DECIMAL for Money -- Never FLOAT}
+    \texttt{FLOAT} and \texttt{DOUBLE} store approximate values using binary floating-point.
+    This can introduce rounding errors: \texttt{0.1 + 0.2} may not equal exactly \texttt{0.3}.
+    For monetary amounts, always use \texttt{DECIMAL(p,s)}.
+  \end{alertblock}
 
--- Rename a column
-ALTER TABLE employee RENAME COLUMN email TO work_email;
+  \begin{lstlisting}[style=sqlstyle]
+-- Wrong: floating-point imprecision
+price FLOAT,          -- 9.99 might be stored as 9.98999977...
 
--- Change the data type of a column
-ALTER TABLE employee MODIFY COLUMN age TINYINT;
+-- Correct: exact representation
+price DECIMAL(10, 2), -- exactly 2 decimal places, up to 99999999.99
 
--- Remove a column
-ALTER TABLE employee DROP COLUMN age;
+-- ENUM: restricts values to a defined list
+genre ENUM('Rock', 'Pop', 'Jazz', 'Classical', 'Electronic'),
 
--- Remove an entire table (irreversible!)
-DROP TABLE employee;
-
--- Remove the entire database with all its tables!
-DROP DATABASE supermarket;
-\end{lstlisting}
-  \end{block}
+-- BOOLEAN (stored as TINYINT in MySQL)
+is_explicit BOOLEAN DEFAULT FALSE
+  \end{lstlisting}
 
   \begin{itemize}
-    \item \texttt{ALTER TABLE} modifies the schema of an existing table
-          without (usually) losing its data.
-    \item \texttt{DROP TABLE} is \textbf{permanent} -- there is no undo in
-          SQL; always have a backup before running \texttt{DROP}.
-    \item Narrowing a column type (\texttt{MODIFY COLUMN}) can silently
-          truncate existing data that exceeds the new limit.
+    \item \texttt{ENUM} columns are storage-efficient and self-documenting but adding a new
+          valid value requires an \texttt{ALTER TABLE} operation.
+    \item \texttt{TIMESTAMP} is stored in UTC and converted to the session timezone on read;
+          \texttt{DATETIME} stores the literal value as-is with no timezone conversion.
   \end{itemize}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{ALTER TABLE -- Modifying an Existing Table}
+  \begin{lstlisting}[style=sqlstyle]
+-- Add a new column
+ALTER TABLE Artist ADD COLUMN bio TEXT;
+
+-- Add a column at a specific position (MySQL)
+ALTER TABLE Artist ADD COLUMN website VARCHAR(255) AFTER name;
+
+-- Rename a column (MySQL 8+)
+ALTER TABLE Artist RENAME COLUMN bio TO biography;
+
+-- Change the data type (MODIFY COLUMN)
+ALTER TABLE Track MODIFY COLUMN duration_sec SMALLINT UNSIGNED;
+
+-- Remove a column
+ALTER TABLE Artist DROP COLUMN founded;
+
+-- Rename the table itself
+RENAME TABLE Artist TO Musicians;
+  \end{lstlisting}
+
+  \begin{itemize}
+    \item \texttt{ALTER TABLE} changes the schema without losing existing data (usually).
+    \item \textbf{Narrowing} a column type can silently truncate data that exceeds the new limit.
+  \end{itemize}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{ALTER TABLE -- Adding and Dropping Constraints}
+  \begin{lstlisting}[style=sqlstyle]
+-- Add a foreign key constraint after table creation
+ALTER TABLE Album
+ADD CONSTRAINT fk_album_artist
+    FOREIGN KEY (artist_id) REFERENCES Artist(id)
+    ON DELETE CASCADE;
+
+-- Add a CHECK constraint
+ALTER TABLE Track
+ADD CONSTRAINT chk_track_no CHECK (track_no BETWEEN 1 AND 99);
+
+-- Drop a named constraint (MySQL: DROP FOREIGN KEY / DROP CHECK)
+ALTER TABLE Album DROP FOREIGN KEY fk_album_artist;
+ALTER TABLE Track DROP CHECK chk_track_no;
+
+-- Add an index to speed up lookups
+ALTER TABLE Album ADD INDEX idx_year (year);
+  \end{lstlisting}
+
+  \begin{block}{Naming Constraints}
+    Named constraints produce readable error messages and can be dropped by name without
+    recreating the entire table -- always name your constraints in production schemas.
+  \end{block}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{DROP TABLE and DROP DATABASE}
+  \begin{lstlisting}[style=sqlstyle]
+-- Remove a table -- ALL data and schema is lost permanently!
+DROP TABLE Track;
+
+-- Safe version: only drops if the table exists (no error otherwise)
+DROP TABLE IF EXISTS Track;
+
+-- Remove a database with ALL its tables
+DROP DATABASE music_db;
+
+-- Safe version
+DROP DATABASE IF EXISTS music_db;
+
+-- Typical migration script pattern
+DROP TABLE IF EXISTS Track;
+DROP TABLE IF EXISTS Album;
+DROP TABLE IF EXISTS Artist;
+-- Now recreate in correct FK order:
+CREATE TABLE Artist (...);
+CREATE TABLE Album  (...);
+CREATE TABLE Track  (...);
+  \end{lstlisting}
+
+  \begin{alertblock}{DROP is Permanent}
+    There is no \texttt{UNDO} for \texttt{DROP} in SQL.
+    Always take a backup before running destructive DDL in production.
+  \end{alertblock}
 \end{frame}

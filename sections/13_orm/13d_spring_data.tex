@@ -1,28 +1,76 @@
 % ----------------------------------------------------------
 \begin{frame}[fragile]{Spring Data JPA -- Repository Pattern}
-  \textbf{Spring Data JPA} builds on top of JPA/Hibernate and eliminates almost
-  all boilerplate CRUD code. You define an interface; Spring generates the
-  implementation at runtime.
+  \textbf{Spring Data JPA} eliminates almost all boilerplate CRUD code.
+  You define an interface; Spring generates the full implementation at runtime.
 
   \begin{lstlisting}[style=sqlstyle, language=Java]
 // Extend JpaRepository<EntityType, PrimaryKeyType>
-public interface EmployeeRepository
-    extends JpaRepository<Employee, Long> {
+public interface ArtistRepository
+        extends JpaRepository<Artist, Long> {
 
-    // Spring derives the SQL from the method name:
-    List<Employee> findByLastName(String lastName);
-    List<Employee> findByDepartmentNameAndAgeGreaterThan(
-        String deptName, int age);
+    // Spring derives SQL from the method name automatically:
+    Optional<Artist> findByName(String name);
+    List<Artist>     findByCountry(String country);
+    List<Artist>     findByNameContainingIgnoreCase(String keyword);
 
-    // Use JPQL for complex queries
-    @Query("SELECT e FROM Employee e WHERE e.salary > :min")
-    List<Employee> findHighEarners(@Param("min") double minSalary);
+    // Custom JPQL query
+    @Query("SELECT a FROM Artist a WHERE SIZE(a.albums) > :min")
+    List<Artist> findProlificArtists(@Param("min") int minAlbums);
+
+    // Native SQL fallback
+    @Query(value = "SELECT * FROM artist WHERE country = ?1",
+           nativeQuery = true)
+    List<Artist> findByCountryNative(String country);
 }
   \end{lstlisting}
+\end{frame}
 
-  \begin{block}{What Spring provides for free}
-    \texttt{save(entity)}, \texttt{findById(id)}, \texttt{findAll()},
-    \texttt{deleteById(id)}, \texttt{count()}, \texttt{existsById(id)} --
-    all implemented automatically, all using parameterised queries internally.
+% ----------------------------------------------------------
+\begin{frame}[fragile]{Spring Data JPA -- Built-in Methods}
+  Extending \texttt{JpaRepository} gives you these methods for \textbf{free}:
+
+  \begin{lstlisting}[style=sqlstyle, language=Java]
+// --- Provided automatically by JpaRepository ---
+
+Artist saved   = repo.save(artist);          // INSERT or UPDATE
+Optional<Artist> found = repo.findById(1L);  // SELECT by PK
+List<Artist>   all    = repo.findAll();      // SELECT *
+long           count  = repo.count();        // SELECT COUNT(*)
+boolean        exists = repo.existsById(1L); // SELECT 1 WHERE id=?
+repo.deleteById(1L);                         // DELETE WHERE id=?
+repo.deleteAll(list);                        // batch delete
+
+// Pagination and sorting:
+Page<Artist> page = repo.findAll(
+    PageRequest.of(0, 10, Sort.by("name"))
+);
+  \end{lstlisting}
+
+  \begin{block}{Key Point}
+    All these operations use \textbf{parameterised queries internally} -- SQL injection
+    is structurally impossible through Spring Data JPA.
   \end{block}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{Spring Data JPA -- Method Name Derivation}
+  Spring parses the method name and generates the correct \texttt{WHERE} clause automatically:
+
+  \begin{lstlisting}[style=sqlstyle, language=Java]
+// Method name                      Generated WHERE clause
+findByCountry(String c)          // WHERE country = ?
+findByCountryAndYear(...)        // WHERE country = ? AND year = ?
+findByNameContaining(String s)   // WHERE name LIKE %?%
+findByYearBetween(int a, int b)  // WHERE year BETWEEN ? AND ?
+findByYearGreaterThan(int y)     // WHERE year > ?
+findByNameIgnoreCase(String n)   // WHERE UPPER(name) = UPPER(?)
+findByCountryOrderByNameAsc(...) // WHERE country = ? ORDER BY name
+findTop5ByCountry(String c)      // WHERE country = ? LIMIT 5
+  \end{lstlisting}
+
+  \begin{itemize}
+    \item Keywords: \texttt{And}, \texttt{Or}, \texttt{Not}, \texttt{Between}, \texttt{LessThan},
+          \texttt{GreaterThan}, \texttt{Like}, \texttt{Containing}, \texttt{StartingWith},
+          \texttt{EndingWith}, \texttt{In}, \texttt{IsNull}, \texttt{OrderBy}, \texttt{Top}, \ldots
+  \end{itemize}
 \end{frame}

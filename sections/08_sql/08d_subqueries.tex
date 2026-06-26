@@ -1,68 +1,118 @@
 % ----------------------------------------------------------
-\begin{frame}[fragile]{Subqueries \textbf{(!)}}
-  A \textbf{subquery} (or inner query) is a \texttt{SELECT} statement
-  nested inside another SQL statement.
+\begin{frame}[fragile]{Subqueries -- Introduction}
+  A \textbf{subquery} (inner query) is a \texttt{SELECT} statement nested inside
+  another SQL statement. It is evaluated first and its result is used by the outer query.
 
-  \begin{block}{Three Common Positions}
-\begin{lstlisting}[style=sqlstyle]
--- 1. Subquery in FROM (derived table / inline view)
-SELECT name
-FROM (SELECT * FROM product WHERE price > 5) AS expensive;
-
--- 2. Subquery in WHERE with IN
-SELECT name FROM department
-WHERE id IN (
-  SELECT department_id FROM product
-  GROUP BY department_id
-  HAVING COUNT(*) > 5
-);
-
--- 3. Correlated subquery (references outer query row by row)
-SELECT name,
-  (SELECT AVG(p2.price) FROM product p2
-   WHERE p2.brand_id = p.brand_id) AS brand_avg
-FROM product p;
-\end{lstlisting}
+  \begin{block}{Three Positions for Subqueries}
+    \begin{tabular}{@{}ll@{}}
+      \toprule
+      \textbf{Position} & \textbf{What it produces} \\
+      \midrule
+      \texttt{FROM} clause   & A temporary table (derived table / inline view) \\
+      \texttt{WHERE} clause  & A value or set of values to compare against \\
+      \texttt{SELECT} clause & A scalar value (one value per outer row) \\
+      \bottomrule
+    \end{tabular}
   \end{block}
 
-  \begin{alertblock}{Correlated Subqueries Are Slow}
-    A correlated subquery is re-executed \textbf{once per row} of the outer
-    query.  For large tables this can be extremely slow.  Consider rewriting
-    with a \texttt{JOIN} or window function instead.
-  \end{alertblock}
+  \begin{block}{Example: Subquery in FROM}
+\begin{lstlisting}[style=sqlstyle]
+-- Find artist name for albums released before 1980
+SELECT ar.Name, sub.Title
+FROM (
+  SELECT Title, ArtistID FROM Album WHERE ReleaseYear < 1980
+) AS sub
+JOIN Artist AS ar ON sub.ArtistID = ar.ArtistID;
+-- Returns: The Beatles / Abbey Road, Kraftwerk / Autobahn
+\end{lstlisting}
+  \end{block}
 \end{frame}
 
 % ----------------------------------------------------------
-\begin{frame}[fragile]{EXISTS, ANY, ALL \textbf{(!)}}
-  \begin{block}{Set-Based Comparison Operators}
+\begin{frame}[fragile]{Subqueries -- IN and EXISTS}
+  \begin{block}{Subquery in WHERE with IN}
 \begin{lstlisting}[style=sqlstyle]
--- EXISTS: true if subquery returns at least one row
-SELECT * FROM employee AS e
+-- Artists who have at least one Electronic album
+SELECT Name FROM Artist
+WHERE ArtistID IN (
+  SELECT ArtistID FROM Album WHERE Genre = 'Electronic'
+);
+-- Returns: Kraftwerk, Daft Punk
+\end{lstlisting}
+  \end{block}
+
+  \begin{block}{Subquery with EXISTS (often faster)}
+\begin{lstlisting}[style=sqlstyle]
+-- Same result, but EXISTS stops as soon as one match is found
+SELECT Name FROM Artist AS ar
 WHERE EXISTS (
-  SELECT 1 FROM product AS p
-  WHERE p.department_id = e.department_id
-);
-
--- ANY: true if any subquery value satisfies the condition
-SELECT * FROM product
-WHERE price > ANY (
-  SELECT price FROM product WHERE department_id = 8
-);
-
--- ALL: true if ALL subquery values satisfy the condition
-SELECT * FROM product
-WHERE price > ALL (
-  SELECT price FROM product WHERE department_id = 3
+  SELECT 1 FROM Album AS al
+  WHERE al.ArtistID = ar.ArtistID
+    AND al.Genre = 'Electronic'
 );
 \end{lstlisting}
   \end{block}
 
   \begin{itemize}
-    \item \texttt{EXISTS} is often more efficient than \texttt{IN} because
-          the database can stop as soon as it finds \emph{one} matching row.
-    \item \texttt{> ANY} is equivalent to \texttt{> MIN(\ldots)};
-          \texttt{> ALL} is equivalent to \texttt{> MAX(\ldots)}.
-    \item \texttt{NOT EXISTS} is the standard way to express the
-          \textbf{relational division} pattern.
+    \item \texttt{EXISTS} returns \texttt{TRUE} as soon as one matching row is found
+    \item \texttt{NOT EXISTS} finds artists with \emph{no} Electronic albums
+  \end{itemize}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{Correlated Subqueries -- and Why to Avoid Them}
+  \begin{block}{Correlated subquery: re-executed once per outer row}
+\begin{lstlisting}[style=sqlstyle]
+-- For each track, show the average duration of its album
+SELECT t.Title, t.Duration,
+  (SELECT AVG(t2.Duration) FROM Track t2
+   WHERE t2.AlbumID = t.AlbumID) AS album_avg
+FROM Track AS t;
+\end{lstlisting}
+  \end{block}
+
+  \begin{block}{Better: JOIN + GROUP BY (executes only once)}
+\begin{lstlisting}[style=sqlstyle]
+SELECT t.Title, t.Duration, avg_data.avg_dur
+FROM Track AS t
+JOIN (
+  SELECT AlbumID, AVG(Duration) AS avg_dur
+  FROM Track GROUP BY AlbumID
+) AS avg_data ON t.AlbumID = avg_data.AlbumID;
+\end{lstlisting}
+  \end{block}
+
+  \begin{alertblock}{Performance}
+    A correlated subquery re-executes \textbf{once per outer row}.
+    With 50,000 tracks that is 50,000 subquery executions. Always prefer JOIN.
+  \end{alertblock}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{EXISTS, ANY, ALL}
+  \begin{block}{Set-Based Comparisons}
+\begin{lstlisting}[style=sqlstyle]
+-- ANY: true if ANY value in subquery satisfies the condition
+-- Tracks longer than AT LEAST ONE track on Album 1
+SELECT Title, Duration FROM Track
+WHERE Duration > ANY (
+  SELECT Duration FROM Track WHERE AlbumID = 1
+);
+-- Equivalent to: Duration > MIN(durations on Album 1) = 182
+
+-- ALL: true if the condition holds for ALL subquery values
+-- Tracks longer than EVERY track on Album 1
+SELECT Title, Duration FROM Track
+WHERE Duration > ALL (
+  SELECT Duration FROM Track WHERE AlbumID = 1
+);
+-- Equivalent to: Duration > MAX(durations on Album 1) = 259
+\end{lstlisting}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{> ANY} $\equiv$ \texttt{> MIN(\ldots)}
+    \item \texttt{> ALL} $\equiv$ \texttt{> MAX(\ldots)}
+    \item \texttt{NOT EXISTS} is the preferred way to express relational division
   \end{itemize}
 \end{frame}

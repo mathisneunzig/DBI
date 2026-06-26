@@ -1,0 +1,1648 @@
+\documentclass[10pt]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{graphicx}
+\usepackage{eurosym}
+\usepackage{tikz}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+
+% SQL / code listing style
+\lstdefinestyle{sqlstyle}{
+  language=SQL,
+  basicstyle=\small\ttfamily,
+  keywordstyle=\color{blue!80!black}\bfseries,
+  commentstyle=\color{gray!70}\itshape,
+  stringstyle=\color{orange!80!black},
+  breaklines=true,
+  showstringspaces=false,
+  frame=single,
+  backgroundcolor=\color{gray!10},
+  rulecolor=\color{gray!40},
+  tabsize=2,
+}
+
+% Relational algebra shorthand commands
+\newcommand{\rasel}{\sigma}
+\newcommand{\raproj}{\pi}
+\newcommand{\raren}{\rho}
+\newcommand{\rajoin}{\bowtie}
+\newcommand{\ralsem}{\ltimes}
+\newcommand{\rarsem}{\rtimes}
+
+\title[Databases I -- Exercises]{Databases I -- Exercises}
+\subtitle{Semester 3 (Theory)}
+\author[Neunzig, M.]{Mathis Neunzig}
+\institute[DHBW Mosbach]{DHBW Mosbach}
+\date[Autumn 2026]{Autumn 2026}
+
+\AtBeginSection[]{
+  \begin{frame}
+    \frametitle{Table of Contents}
+    \tableofcontents[currentsection]
+  \end{frame}
+}
+
+\begin{document}
+
+\frame{\titlepage}
+
+\begin{frame}
+  \frametitle{Table of Contents}
+  \tableofcontents
+\end{frame}
+
+% ============================================================
+\section{Relational Databases -- Keys}
+% ============================================================
+
+% ------------------------------------------------------------
+\subsection{Exercise 1A -- University Schema}
+
+\begin{frame}{Exercise 1A -- University Schema}
+  \begin{block}{Relational Schema}
+    \small
+    \begin{itemize}
+      \item \textbf{Student}(\underline{MatrNr}, FirstName, LastName, Email, DOB, MajorID\textsuperscript{FK})
+      \item \textbf{Department}(\underline{DeptID}, Name, Building, HeadProfID\textsuperscript{FK})
+      \item \textbf{Course}(\underline{CourseID}, Title, Credits, DeptID\textsuperscript{FK})
+      \item \textbf{Enrollment}(\underline{MatrNr\textsuperscript{FK}, CourseID\textsuperscript{FK}}, Semester, Grade)
+      \item \textbf{Professor}(\underline{ProfID}, FirstName, LastName, Email, DeptID\textsuperscript{FK})
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Tasks -- answer for every relation}
+    \begin{enumerate}
+      \item List all \textbf{attributes} and their domains.
+      \item Identify all \textbf{candidate keys}; select and justify your \textbf{primary key}.
+      \item Identify all \textbf{foreign keys} and state which PK each one references.
+      \item Classify every key as \emph{simple/composite} and \emph{natural/surrogate}.
+      \item Create \textbf{2 realistic sample tuples} for each relation.
+    \end{enumerate}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Simple \quad Time: 15 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 1B -- Airline Schema}
+
+\begin{frame}{Exercise 1B -- Airline Schema}
+  \begin{block}{Relational Schema}
+    \small
+    \begin{itemize}
+      \item \textbf{Airline}(\underline{AirlineCode}, Name, Country, FoundedYear)
+      \item \textbf{Airport}(\underline{IATA}, Name, City, Country, Terminals)
+      \item \textbf{Connection}(\underline{ConnectionID}, DepartureIATA\textsuperscript{FK}, ArrivalIATA\textsuperscript{FK}, AirlineCode\textsuperscript{FK}, FlightNumber)
+      \item \textbf{Schedule}(\underline{ConnectionID\textsuperscript{FK}, Date}, DepartureTime, ArrivalTime, Status)
+      \item \textbf{Passenger}(\underline{PassengerID}, FirstName, LastName, Passport, Nationality)
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Tasks -- same 5 questions as 1A}
+    \begin{enumerate}
+      \item List all \textbf{attributes} and their domains.
+      \item Identify all \textbf{candidate keys}; select and justify your \textbf{primary key}.
+      \item Identify all \textbf{foreign keys} and state which PK each one references.
+      \item Classify every key as \emph{simple/composite} and \emph{natural/surrogate}.
+      \item Create \textbf{2 realistic sample tuples} for each relation.
+    \end{enumerate}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Simple \quad Time: 15 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 1C -- Event Schema}
+
+\begin{frame}{Exercise 1C -- Event Schema}
+  \begin{block}{Relational Schema}
+    \small
+    \begin{itemize}
+      \item \textbf{Event}(\underline{EventID}, Title, Date, Location, OrganizerID\textsuperscript{FK})
+      \item \textbf{Organizer}(\underline{OrgID}, Name, Email, Phone)
+      \item \textbf{Sponsor}(\underline{SponsorID}, CompanyName, ContactEmail, Budget)
+      \item \textbf{Sponsorship}(\underline{EventID\textsuperscript{FK}, SponsorID\textsuperscript{FK}}, Amount, ContractDate)
+      \item \textbf{Attendee}(\underline{AttendeeID}, FirstName, LastName, Email)
+      \item \textbf{Attendance}(\underline{AttendeeID\textsuperscript{FK}, EventID\textsuperscript{FK}}, RegistrationDate, Paid)
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Tasks -- same 5 questions as 1A}
+    \begin{enumerate}
+      \item List all \textbf{attributes} and their domains.
+      \item Identify all \textbf{candidate keys}; select and justify your \textbf{primary key}.
+      \item Identify all \textbf{foreign keys} and state which PK each one references.
+      \item Classify every key as \emph{simple/composite} and \emph{natural/surrogate}.
+      \item Create \textbf{2 realistic sample tuples} for each relation.
+    \end{enumerate}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Intermediate \quad Time: 20 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 1D -- Music Schema}
+
+\begin{frame}{Exercise 1D -- Music Schema}
+  \begin{block}{Relational Schema}
+    \small
+    \begin{itemize}
+      \item \textbf{Artist}(\underline{ArtistID}, Name, Country, DebutYear, Genre)
+      \item \textbf{Album}(\underline{AlbumID}, Title, ArtistID\textsuperscript{FK}, ReleaseYear, Label)
+      \item \textbf{Track}(\underline{TrackID}, Title, AlbumID\textsuperscript{FK}, TrackNumber, Duration)
+      \item \textbf{Features}(\underline{TrackID\textsuperscript{FK}, FeaturedArtistID\textsuperscript{FK}})
+      \item \textbf{Playlist}(\underline{PlaylistID}, Name, UserID, CreatedDate)
+      \item \textbf{PlaylistTrack}(\underline{PlaylistID\textsuperscript{FK}, TrackID\textsuperscript{FK}}, AddedDate, Position)
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Tasks -- same 5 questions as 1A}
+    \begin{enumerate}
+      \item List all \textbf{attributes} and their domains.
+      \item Identify all \textbf{candidate keys}; select and justify your \textbf{primary key}.
+      \item Identify all \textbf{foreign keys} and state which PK each one references.
+      \item Classify every key as \emph{simple/composite} and \emph{natural/surrogate}.
+      \item Create \textbf{2 realistic sample tuples} for each relation.
+    \end{enumerate}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Intermediate \quad Time: 20 min}
+  \end{alertblock}
+\end{frame}
+
+% ============================================================
+\section{Relational Algebra}
+% ============================================================
+
+% ------------------------------------------------------------
+\subsection{Exercise 2A -- Customer / Supplier / Good (Basic)}
+
+\begin{frame}{Exercise 2A -- Schema}
+  \begin{block}{Schema}
+    \begin{itemize}
+      \item \textbf{Customer}(\underline{CustID}, Name, City, Balance)
+      \item \textbf{Supplier}(\underline{SupplierID}, Name, City, ContactEmail)
+      \item \textbf{Good}(\underline{GoodID}, Name, Price, SupplierID\textsuperscript{FK})
+    \end{itemize}
+  \end{block}
+
+  \vspace{4pt}
+  \small
+  \begin{tabular}{|l|l|l|r|}
+    \hline
+    \textbf{CustID} & \textbf{Name} & \textbf{City} & \textbf{Balance} \\
+    \hline
+    C1 & Maier GmbH & Mosbach & 240.00 \\
+    C2 & Schulz AG & Heidelberg & -50.00 \\
+    \hline
+  \end{tabular}
+  \quad
+  \begin{tabular}{|l|l|l|}
+    \hline
+    \textbf{SupplierID} & \textbf{Name} & \textbf{City} \\
+    \hline
+    S1 & Fresh Foods & Mosbach \\
+    S2 & Top Drinks & Heidelberg \\
+    \hline
+  \end{tabular}
+
+  \vspace{4pt}
+  \begin{tabular}{|l|l|r|l|}
+    \hline
+    \textbf{GoodID} & \textbf{Name} & \textbf{Price} & \textbf{SupplierID} \\
+    \hline
+    G1 & Apple & 0.49 & S1 \\
+    G2 & Orange Juice & 2.99 & S2 \\
+    G3 & Sparkling Water & 6.50 & S1 \\
+    \hline
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Exercise 2A -- Tasks}
+  \begin{block}{Tasks -- express in relational algebra}
+    \begin{enumerate}
+      \item List all goods with price $> 5.00$ (show Name, Price).
+      \item List all suppliers located in Mosbach.
+      \item List all customers with a \textbf{negative} balance.
+      \item Find all goods supplied by suppliers in Mosbach.
+      \item List customer names and cities only (project exactly these two columns).
+      \item Find customers whose balance is less than the price of the cheapest good.
+    \end{enumerate}
+  \end{block}
+
+  \begin{block}{Reminder: operators}
+    $\sigma_{\text{condition}}(R)$ \quad
+    $\pi_{\text{attrs}}(R)$ \quad
+    $R_1 \bowtie R_2$ \quad
+    $R_1 \times R_2$ \quad
+    $R_1 \setminus R_2$
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Simple \quad Time: 15 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 2B -- Customer / Supplier / Good (Harder)}
+
+\begin{frame}{Exercise 2B -- Tasks}
+  \begin{block}{Schema (same as 2A, Supplier now also has a Cost column)}
+    \begin{itemize}
+      \item \textbf{Customer}(\underline{CustID}, Name, City, Balance)
+      \item \textbf{Supplier}(\underline{SupplierID}, Name, City, ContactEmail, Cost)
+      \item \textbf{Good}(\underline{GoodID}, Name, Price, SupplierID\textsuperscript{FK})
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Find goods where the price margin (Price $-$ Cost) $> 2.00$.
+      \item List all suppliers in Heidelberg.
+      \item List customers whose balance exceeds the price of the most expensive good.
+      \item Find all goods \textbf{not} supplied by suppliers in Mosbach.
+      \item Find all customer--supplier pairs from the \textbf{same city} (use Cartesian product + restriction).
+    \end{enumerate}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Simple--Intermediate \quad Time: 20 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 2C -- PC / Laptop / Printer (Intermediate)}
+
+\begin{frame}{Exercise 2C -- Schema}
+  \begin{block}{Schema}
+    \begin{itemize}
+      \item \textbf{Product}(\underline{ProductID}, Maker, Type)
+      \item \textbf{PC}(\underline{ProductID\textsuperscript{FK}}, Speed\_GHz, RAM\_GB, HDD\_GB, Price)
+      \item \textbf{Laptop}(\underline{ProductID\textsuperscript{FK}}, Speed\_GHz, RAM\_GB, HDD\_GB, Screen\_inch, Price)
+      \item \textbf{Printer}(\underline{ProductID\textsuperscript{FK}}, Color, Type, Price)
+    \end{itemize}
+  \end{block}
+
+  \small
+  \begin{tabular}{|l|l|l|}
+    \hline
+    \textbf{ProductID} & \textbf{Maker} & \textbf{Type} \\
+    \hline
+    P01 & Dell & PC \\
+    P02 & Dell & Laptop \\
+    P03 & HP & PC \\
+    P04 & HP & Printer \\
+    P05 & Apple & Laptop \\
+    \hline
+  \end{tabular}
+  \quad
+  \begin{tabular}{|l|r|r|r|r|}
+    \hline
+    \textbf{ProductID} & \textbf{GHz} & \textbf{RAM} & \textbf{HDD} & \textbf{Price} \\
+    \hline
+    P01 & 3.2 & 16 & 512 & 899.00 \\
+    P03 & 2.8 & 8 & 256 & 649.00 \\
+    \hline
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Exercise 2C -- Tasks}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item List all PCs with speed $> 3.0$ GHz.
+      \item Find all manufacturers who make \textbf{both} PCs and Laptops.
+      \item List all products from manufacturer \texttt{'Dell'}.
+      \item Find all PC--Laptop pairs from the \textbf{same manufacturer} (use Cartesian product).
+      \item Find makers who produce at least \textbf{3 different types} of products.
+    \end{enumerate}
+  \end{block}
+
+  \begin{block}{Hint for task 2}
+    Use projection + intersection:
+    $\pi_{\text{Maker}}(\sigma_{\text{Type}=\text{'PC'}}(\text{Product})) \cap \pi_{\text{Maker}}(\sigma_{\text{Type}=\text{'Laptop'}}(\text{Product}))$
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Intermediate \quad Time: 20 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 2D -- PC / Laptop / Printer (Advanced Algebra)}
+
+\begin{frame}{Exercise 2D -- Tasks}
+  \begin{block}{Schema (same as 2C)}
+    \textbf{Product}(\underline{ProductID}, Maker, Type) \quad
+    \textbf{PC}(\underline{ProductID}, Speed\_GHz, RAM\_GB, HDD\_GB, Price)\\
+    \textbf{Laptop}(\underline{ProductID}, Speed\_GHz, RAM\_GB, HDD\_GB, Screen\_inch, Price)\\
+    \textbf{Printer}(\underline{ProductID}, Color, Type, Price)
+  \end{block}
+
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Find laptops with screen size $\geq 15$ inch \textbf{and} price $< 1000$.
+      \item List all manufacturers who \textbf{only} make printers (not PCs or Laptops).
+      \item Find all products more expensive than the \textbf{average} PC price (use $\gamma$).
+      \item Count products per manufacturer using $\gamma$ (grouping/aggregation).
+      \item Write as relational algebra: \emph{``Find makers of PCs with speed $> 3$ GHz''} -- express as a single nested expression.
+    \end{enumerate}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Intermediate \quad Time: 25 min}
+  \end{alertblock}
+\end{frame}
+
+% ============================================================
+\section{Normal Forms (1NF -- BCNF)}
+% ============================================================
+
+% ------------------------------------------------------------
+\subsection{Exercise 3A -- Eurovision Song Contest (Worked Example)}
+
+\begin{frame}{Exercise 3A -- Eurovision Song Contest}
+  \begin{block}{Starting Relation}
+    $R($Year, Country, Song, Artist, Points, Rank, Host\_Country, Host\_City$)$
+  \end{block}
+
+  \small
+  \begin{tabular}{|l|l|l|l|r|r|l|l|}
+    \hline
+    \textbf{Year} & \textbf{Country} & \textbf{Song} & \textbf{Artist} & \textbf{Pts} & \textbf{Rank} & \textbf{Host} & \textbf{City} \\
+    \hline
+    2023 & Sweden  & Tattoo      & Loreen           & 583 & 1 & UK    & Liverpool \\
+    2023 & Finland & Cha Cha Cha & K\"{a}\"{a}rij\"{a}           & 526 & 2 & UK    & Liverpool \\
+    2022 & Ukraine & Stefania    & Kalush Orchestra & 631 & 1 & Italy & Turin     \\
+    2022 & UK      & Space Man   & Sam Ryder        & 466 & 2 & Italy & Turin     \\
+    \hline
+  \end{tabular}
+
+  \vspace{6pt}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Identify all violations of 1NF, 2NF, 3NF, BCNF.
+      \item Decompose to \textbf{1NF} (if needed).
+      \item Decompose to \textbf{2NF} -- show functional dependencies, show decomposed tables.
+      \item Decompose to \textbf{3NF} -- identify and eliminate transitive FDs.
+      \item Check if \textbf{BCNF} is achieved; decompose further if necessary.
+    \end{enumerate}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Exercise 3A -- Functional Dependencies}
+  \begin{block}{Identify the Functional Dependencies}
+    Working from the relation\\
+    $R($Year, Country, Song, Artist, Points, Rank, Host\_Country, Host\_City$)$:
+    \vspace{4pt}
+    \begin{itemize}
+      \item Which attributes uniquely identify a tuple?
+      \item What does \{Year, Country\} determine?
+      \item What does Year alone determine?
+      \item Is there a transitive dependency (e.g.\ $A \to B \to C$)?
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Guiding Questions for Each Normal Form}
+    \begin{description}
+      \item[1NF] Are all attribute values atomic?  Any repeating groups?
+      \item[2NF] Are there non-prime attributes that depend on only \emph{part} of the PK?
+      \item[3NF] Are there non-prime attributes that transitively depend on the PK?
+      \item[BCNF] Does every non-trivial FD have a \textbf{superkey} on the left?
+    \end{description}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Simple--Intermediate \quad Time: 25 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 3B -- Ticket Schema}
+
+\begin{frame}{Exercise 3B -- Ticket Schema}
+  \begin{block}{Starting Relation}
+    $\text{Ticket}($TicketID, EventName, EventDate, Venue, VenueCity, CustomerName,\\
+    \hspace{2.4cm} CustomerEmail, SeatNumber, Price, TicketType$)$
+  \end{block}
+
+  \begin{block}{Known Functional Dependencies}
+    \begin{itemize}
+      \item $\text{TicketID} \to \text{all other attributes}$
+      \item $\text{EventName} \to \text{EventDate},\ \text{Venue}$
+      \item $\text{Venue} \to \text{VenueCity}$
+      \item $\text{CustomerEmail} \to \text{CustomerName}$
+      \item $\{\text{TicketID},\ \text{SeatNumber}\} \to \text{Price}$ \quad (if modelled as composite)
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Identify all violations of 1NF, 2NF, 3NF, BCNF.
+      \item Decompose step by step to 1NF $\to$ 2NF $\to$ 3NF.
+      \item Show all intermediate tables after each decomposition step.
+      \item Check if BCNF is achieved.
+    \end{enumerate}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Intermediate \quad Time: 30 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 3C -- Library Loan Schema}
+
+\begin{frame}{Exercise 3C -- Library Loan Schema}
+  \begin{block}{Starting Relation}
+    $\text{LibraryLoan}($LoanID, BookISBN, BookTitle, AuthorName, BorrowerID,\\
+    \hspace{3.0cm} BorrowerName, BorrowerEmail, LoanDate, ReturnDate,\\
+    \hspace{3.0cm} LibraryBranch, BranchCity$)$
+  \end{block}
+
+  \begin{block}{Known Functional Dependencies}
+    \begin{itemize}
+      \item $\text{LoanID} \to \text{all other attributes}$
+      \item $\text{BookISBN} \to \text{BookTitle},\ \text{AuthorName}$
+      \item $\text{BorrowerID} \to \text{BorrowerName},\ \text{BorrowerEmail}$
+      \item $\text{LibraryBranch} \to \text{BranchCity}$
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Identify all violations of 1NF, 2NF, 3NF, BCNF.
+      \item Decompose step by step to 1NF $\to$ 2NF $\to$ 3NF.
+      \item Show all intermediate tables after each decomposition step.
+      \item Verify lossless-join property after final decomposition.
+    \end{enumerate}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Advanced \quad Time: 35 min}
+  \end{alertblock}
+\end{frame}
+
+% ============================================================
+\section{Normal Forms (4NF / 5NF)}
+% ============================================================
+
+% ------------------------------------------------------------
+\subsection{Exercise 4A -- Train / Conductor / Mechanic (4NF)}
+
+\begin{frame}{Exercise 4A -- Train / Conductor / Mechanic}
+  \begin{block}{Starting Relation}
+    $R($Train, Conductor, Mechanic$)$
+  \end{block}
+
+  \begin{block}{Multi-Valued Dependencies (MVDs)}
+    \begin{itemize}
+      \item $\text{Train} \twoheadrightarrow \text{Conductor}$ \quad (a train can be driven by multiple conductors, independently of mechanics)
+      \item $\text{Train} \twoheadrightarrow \text{Mechanic}$ \quad (a train can be maintained by multiple mechanics, independently)
+    \end{itemize}
+  \end{block}
+
+  \small
+  \begin{tabular}{|l|l|l|}
+    \hline
+    \textbf{Train} & \textbf{Conductor} & \textbf{Mechanic} \\
+    \hline
+    ICE 42 & Hoffmann & Bauer \\
+    ICE 42 & Hoffmann & Klein \\
+    ICE 42 & Neumann  & Bauer \\
+    ICE 42 & Neumann  & Klein \\
+    \hline
+  \end{tabular}
+
+  \vspace{6pt}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Identify the MVDs and explain the resulting redundancy.
+      \item Decompose to \textbf{4NF} -- show the decomposed tables.
+      \item Verify that the decomposition is lossless.
+    \end{enumerate}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Intermediate \quad Time: 20 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 4B -- Line / Station / Day (5NF)}
+
+\begin{frame}{Exercise 4B -- Line / Station / Day}
+  \begin{block}{Starting Relation}
+    $R($Line, Station, Day$)$
+  \end{block}
+
+  \begin{block}{Business Constraint (Join Dependency)}
+    If line $L$ stops at station $S$, and line $L$ runs on day $D$, and station $S$ is served on day $D$ -- then the combination $(L, S, D)$ \textbf{must} exist in $R$.
+  \end{block}
+
+  \small
+  \begin{tabular}{|l|l|l|}
+    \hline
+    \textbf{Line} & \textbf{Station} & \textbf{Day} \\
+    \hline
+    RE7 & Mosbach & Monday \\
+    RE7 & Heidelberg & Monday \\
+    RE7 & Mosbach & Friday \\
+    RE7 & Heidelberg & Friday \\
+    \hline
+  \end{tabular}
+
+  \vspace{6pt}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Identify the \textbf{join dependency} and explain why 4NF is not sufficient.
+      \item Decompose to \textbf{5NF} -- show the three binary projections.
+      \item Reconstruct the original relation by joining the projections and verify no information is lost.
+    \end{enumerate}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Intermediate \quad Time: 20 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 4C -- Train / Route / Service / CarriageType (4NF)}
+
+\begin{frame}{Exercise 4C -- Train / Route / Service / CarriageType}
+  \begin{block}{Starting Relation}
+    $R($Train, Route, Service, CarriageType$)$
+  \end{block}
+
+  \begin{block}{Multi-Valued Dependencies}
+    All three MVDs hold independently:
+    \begin{itemize}
+      \item $\text{Train} \twoheadrightarrow \text{Route}$
+      \item $\text{Train} \twoheadrightarrow \text{Service}$
+      \item $\text{Train} \twoheadrightarrow \text{CarriageType}$
+    \end{itemize}
+    (A train serves multiple routes, offers multiple services, and can have multiple carriage types -- all choices are independent of each other.)
+  \end{block}
+
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Explain why storing all combinations leads to redundancy.
+      \item Decompose to \textbf{4NF} by eliminating all non-trivial MVDs.
+      \item How many tables result?  Write out each table schema.
+      \item Verify lossless-join property.
+    \end{enumerate}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Intermediate \quad Time: 20 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 4D -- Line / Driver / Shift / Depot (5NF)}
+
+\begin{frame}{Exercise 4D -- Line / Driver / Shift / Depot}
+  \begin{block}{Starting Relation}
+    $R($Line, Driver, Shift, Depot$)$
+  \end{block}
+
+  \begin{block}{Business Rules}
+    \begin{itemize}
+      \item Each driver can work on multiple lines.
+      \item Each line operates in multiple shifts.
+      \item Drivers are assigned to depots.
+      \item The combination $(L, D, S, \text{Dp})$ is valid if and only if each pairwise assignment is valid \textbf{and} the combination is consistent.
+    \end{itemize}
+    This results in a \textbf{join dependency} $\bowtie\{(L,D),\,(L,S),\,(D,\text{Dp})\}$.
+  \end{block}
+
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Identify the join dependency.
+      \item Decompose to \textbf{5NF} -- state each binary/ternary relation.
+      \item Demonstrate that the original relation can be reconstructed by natural join.
+    \end{enumerate}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Advanced \quad Time: 25 min}
+  \end{alertblock}
+\end{frame}
+
+% ============================================================
+\section{Canonical Cover \& Synthesis Algorithm}
+% ============================================================
+
+% ------------------------------------------------------------
+\subsection{Exercise 5A}
+
+\begin{frame}{Exercise 5A -- Canonical Cover \& Synthesis}
+  \begin{block}{Given}
+    $R = \{A, B, C, D\}$
+
+    \vspace{4pt}
+    $F = \{D \to AB,\quad CD \to B,\quad C \to B\}$
+  \end{block}
+
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Compute the \textbf{canonical cover} $F_c$:
+        \begin{itemize}
+          \item Decompose right-hand sides into single attributes.
+          \item Eliminate extraneous attributes from left-hand sides.
+          \item Eliminate redundant FDs.
+        \end{itemize}
+      \item Apply the \textbf{Synthesis Algorithm} to obtain a \textbf{3NF} decomposition.
+      \item Check whether the result is:
+        \begin{itemize}
+          \item \textbf{Dependency-preserving}: can all FDs in $F$ be checked within a single table?
+          \item \textbf{Lossless-join}: does the natural join of all tables reconstruct $R$?
+        \end{itemize}
+    \end{enumerate}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Intermediate \quad Time: 25 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 5B}
+
+\begin{frame}{Exercise 5B -- Canonical Cover \& Synthesis}
+  \begin{block}{Given}
+    $R = \{A, B, C, D, E\}$
+
+    \vspace{4pt}
+    $F = \{CD \to A,\quad D \to AE,\quad C \to BE,\quad ABD \to CE,\quad E \to A\}$
+  \end{block}
+
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Compute the \textbf{canonical cover} $F_c$.
+      \item Determine all \textbf{candidate keys} of $R$.
+      \item Apply the \textbf{Synthesis Algorithm} to obtain a \textbf{3NF} decomposition.
+      \item Check whether the result is dependency-preserving and lossless-join.
+    \end{enumerate}
+  \end{block}
+
+  \begin{block}{Reminder: Attribute Closure}
+    To check if $X$ is a superkey: compute $X^+$ under $F$.\\
+    If $X^+ = R$, then $X$ is a superkey.
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Intermediate--Advanced \quad Time: 30 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 5C}
+
+\begin{frame}{Exercise 5C -- Canonical Cover \& Synthesis}
+  \begin{block}{Given}
+    $R = \{A, B, C, D, E, F\}$
+
+    \vspace{4pt}
+    $F = \{C \to DE,\quad ABC \to DF,\quad ABF \to CDE,\quad ABD \to CF,\quad CEF \to D\}$
+  \end{block}
+
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Compute the \textbf{canonical cover} $F_c$.
+      \item Determine all \textbf{candidate keys} of $R$.
+      \item Apply the \textbf{Synthesis Algorithm} to obtain a \textbf{3NF} decomposition.
+      \item Check dependency-preservation and lossless-join.
+      \item Optional: attempt \textbf{BCNF} decomposition and compare the result.
+    \end{enumerate}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Advanced \quad Time: 35 min}
+  \end{alertblock}
+\end{frame}
+
+% ============================================================
+\section{Entity-Relationship Modelling (ERM)}
+% ============================================================
+
+% ------------------------------------------------------------
+\subsection{Exercise 6A -- Airplane / Flight / Pilot (Simple)}
+
+\begin{frame}{Exercise 6A -- Airplane / Flight / Pilot}
+  \begin{block}{Description}
+    \begin{itemize}
+      \item An \textbf{Airplane} has: registration number, type, and capacity.
+      \item A \textbf{Flight} has: flight number, departure airport, arrival airport, and date.
+      \item A \textbf{Pilot} has: staff number, name, and license type.
+      \item Each flight uses \textbf{exactly one} airplane.
+      \item Each flight is operated by \textbf{exactly one} pilot.
+      \item A pilot can operate \textbf{many} flights; an airplane can be used for \textbf{many} flights.
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Task}
+    Draw the \textbf{Entity-Relationship Diagram} in Chen's notation.
+    \begin{itemize}
+      \item Show all entities with their attributes (underline key attributes).
+      \item Show all relationships with their names.
+      \item Annotate all cardinalities (\texttt{1}, \texttt{N}, \texttt{M} notation or min--max).
+    \end{itemize}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Simple \quad Time: 15 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 6B -- Detailed Flight Schema (Intermediate)}
+
+\begin{frame}{Exercise 6B -- Detailed Flight Schema}
+  \begin{block}{Description}
+    \begin{itemize}
+      \item A \textbf{Flight} (identified by FlightNumber) consists of multiple \textbf{FlightLegs}.
+      \item A \textbf{FlightLeg} connects one \textbf{Airport} to another (origin and destination).
+      \item Each \textbf{Airport} has: IATA code, name, and city.
+      \item A \textbf{DailyFlightLeg} is a scheduled instance of a FlightLeg on a specific date -- it is a \textbf{weak entity}.
+      \item An \textbf{AircraftType} has: a name and seat configuration.
+      \item Each DailyFlightLeg uses exactly one AircraftType.
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Task}
+    Draw the complete \textbf{Extended ERM} in Chen's notation.
+    \begin{itemize}
+      \item Identify and model \textbf{weak entities} with double rectangles and double diamonds.
+      \item Annotate all cardinalities.
+      \item Indicate all identifying relationships.
+    \end{itemize}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Intermediate \quad Time: 25 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 6C -- Crew with Specialization (Advanced)}
+
+\begin{frame}{Exercise 6C -- Crew with Specialization}
+  \begin{block}{Description}
+    \begin{itemize}
+      \item \textbf{Crew members} are either \textbf{Pilots} or \textbf{Flight Attendants} (total, disjoint specialization).
+      \item All crew members share: staff number, name, \emph{languages spoken} (multivalued).
+      \item \textbf{Pilots} additionally have: license number, license type, and a list of aircraft ratings (multivalued -- aircraft types they are certified for).
+      \item \textbf{Flight Attendants} additionally have: seniority level.
+      \item All crew members receive \textbf{emergency training}; each training record has a date and type.
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Task}
+    Draw the \textbf{Extended ERM} using generalization/specialization.
+    \begin{itemize}
+      \item Use the ISA triangle notation with disjoint/total markers.
+      \item Show all attributes, including multivalued attributes (double ellipses).
+      \item Show the \texttt{EmergencyTraining} relationship with its attributes.
+      \item Annotate all cardinalities.
+    \end{itemize}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Advanced \quad Time: 30 min}
+  \end{alertblock}
+\end{frame}
+
+% ============================================================
+\section{Extended ERM (EERM)}
+% ============================================================
+
+% ------------------------------------------------------------
+\subsection{Exercise 7A -- Book / Chapter / Publisher / Author (Simple)}
+
+\begin{frame}{Exercise 7A -- Book / Chapter / Publisher / Author}
+  \begin{block}{Description}
+    \begin{itemize}
+      \item A \textbf{Book} has: title, ISBN, and publication year.
+      \item Each Book belongs to exactly one \textbf{Publisher}; a Publisher has: name and address.
+      \item Each Book has multiple \textbf{Chapters} -- a Chapter is a \textbf{weak entity} (exists only as part of a Book); it has a title and page numbers.
+      \item \textbf{Authors} write Books (m:n); an Author can write multiple books; a Book can have multiple authors.
+      \item An Author has: name and a list of previous publications (\textbf{multivalued attribute}).
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Task}
+    Draw the \textbf{Extended ERM}.
+    \begin{itemize}
+      \item Model the weak entity with double rectangle and double diamond.
+      \item Model the multivalued attribute with double ellipse.
+      \item Show the m:n relationship between Author and Book.
+      \item Annotate all cardinalities.
+    \end{itemize}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Simple \quad Time: 20 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 7B -- Book with Overlapping Specialization (Intermediate)}
+
+\begin{frame}{Exercise 7B -- Book with Overlapping Specialization}
+  \begin{block}{Description}
+    \begin{itemize}
+      \item A \textbf{Book} is a weak entity with \textbf{Chapter} as an even weaker entity.
+      \item \textbf{Contributors} are people who contribute to books; they can be \textbf{Authors}, \textbf{Editors}, or \textbf{both} -- this is an \textbf{overlapping, partial} specialization.
+      \item \textbf{Authors} write Chapters (m:n); a Chapter can be written by multiple Authors.
+      \item \textbf{Editors} edit entire Books (m:n).
+      \item An Editor additionally has an editorial certification attribute.
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Task}
+    Draw the \textbf{Extended ERM}.
+    \begin{itemize}
+      \item Indicate \textbf{overlapping} (``O'') and \textbf{partial} (``P'') markers on the ISA triangle.
+      \item Show the ``writes'' (Author--Chapter) and ``edits'' (Editor--Book) relationships.
+      \item Annotate all cardinalities.
+    \end{itemize}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Intermediate \quad Time: 25 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 7C -- Complex Publication Schema (Advanced)}
+
+\begin{frame}{Exercise 7C -- Complex Publication Schema}
+  \begin{block}{Description}
+    \begin{itemize}
+      \item \textbf{Publication} is a supertype with subtypes \textbf{Book} and \textbf{Proceedings} (total, disjoint).
+      \item A Book has \textbf{Editions} (weak entity); each Edition has \textbf{Chapters} (weak entity of Edition); each Chapter has \textbf{Sections} (weak entity of Chapter).
+      \item A \textbf{Proceedings} belongs to a \textbf{Conference} (with name, year, location).
+      \item A \textbf{Copy} is a physical instance of an Edition (weak entity of Edition).
+      \item \textbf{Contributors} specialize into \textbf{Authors} and \textbf{Editors} (partial, overlapping).
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Task}
+    Draw the complete \textbf{Extended ERM}.
+    \begin{itemize}
+      \item Model all levels of nested weak entities.
+      \item Show both specialization hierarchies.
+      \item Annotate all cardinalities and identifying relationships.
+    \end{itemize}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Advanced \quad Time: 35 min}
+  \end{alertblock}
+\end{frame}
+
+% ============================================================
+\section{ERM + Relational Schema Mapping}
+% ============================================================
+
+% ------------------------------------------------------------
+\subsection{Exercise 8A -- Customers / Discounts / Items / Categories (Simple)}
+
+\begin{frame}{Exercise 8A -- Customers / Discounts / Items / Categories}
+  \begin{block}{Description}
+    \begin{itemize}
+      \item \textbf{Customers} can have \textbf{Discounts} (1:1 -- each customer has at most one active discount; a Discount has percentage and validity period).
+      \item \textbf{Items} belong to \textbf{Categories} (m:n -- an item can be in multiple categories; a Category has name and description).
+      \item An Item has: price, name, and description.
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Draw the \textbf{EERM} with all entities, relationships, attributes, and cardinalities.
+      \item \textbf{Map to a relational schema} applying all standard mapping rules:
+        \begin{itemize}
+          \item Strong entities $\to$ tables with PK.
+          \item 1:1 relationship $\to$ FK in one of the participating tables.
+          \item m:n relationship $\to$ separate junction table with composite PK.
+        \end{itemize}
+      \item Write \textbf{SQL \texttt{CREATE TABLE}} statements (DDL) for all tables, including all constraints.
+    \end{enumerate}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Simple \quad Time: 25 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 8B -- SAP Sales Document Schema (Intermediate)}
+
+\begin{frame}{Exercise 8B -- SAP Sales Document Schema}
+  \begin{block}{Description (simplified SAP SD module)}
+    \begin{itemize}
+      \item A \textbf{SalesDocument} has a \textbf{SalesDocumentType} (standard order, rush order, \ldots).
+      \item Each SalesDocument goes through a \textbf{CreditCheckResult}.
+      \item A SalesDocument produces a \textbf{BillingDocument} (\textbf{BillingType}: invoice, credit memo).
+      \item Each SalesDocument generates a \textbf{DeliveryDocument} (\textbf{DeliveryType}: outbound delivery).
+      \item Documents can carry a \textbf{Block} (delivery block, billing block, credit block).
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Draw the \textbf{EERM} with all entities, type attributes, and cardinalities.
+      \item Derive the complete \textbf{relational schema} with all FKs.
+      \item Identify which relationships are 1:1, 1:N, or M:N.
+    \end{enumerate}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Intermediate \quad Time: 30 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 8C -- SAP Organizational Structure (Advanced)}
+
+\begin{frame}{Exercise 8C -- SAP Organizational Structure}
+  \begin{block}{Entities and Hierarchy}
+    \small
+    \begin{tabular}{@{}ll@{}}
+      \textbf{Plant} & (PlantCode, Name, Address) \\
+      \textbf{CompanyCode} & (CompanyCode, Name, Currency) \\
+      \textbf{StorageLocation} & (StorageLocationCode, Name, PlantCode\textsuperscript{FK}) \\
+      \textbf{PurchasingOrganization} & (PurchOrgCode, Name) \\
+      \textbf{SalesOrganization} & (SalesOrgCode, Name, Currency, CompanyCode\textsuperscript{FK}) \\
+      \textbf{DistributionChannel} & (DistChannelCode, Name) \\
+      \textbf{Division} & (DivisionCode, Name) \\
+    \end{tabular}
+  \end{block}
+
+  \begin{block}{Relationships}
+    \begin{itemize}
+      \item Plant \emph{belongs to} CompanyCode (N:1).
+      \item StorageLocation \emph{belongs to} Plant (N:1).
+      \item SalesOrganization \emph{belongs to} CompanyCode (N:1).
+      \item SalesOrganization \emph{serves} Divisions \emph{through} DistributionChannels (ternary M:N:P).
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Draw the complete \textbf{EERM}.
+      \item Derive the complete \textbf{relational schema} with all FKs, including the ternary relationship.
+    \end{enumerate}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Advanced \quad Time: 35 min}
+  \end{alertblock}
+\end{frame}
+
+% ============================================================
+\section{SQL -- SELECT}
+% ============================================================
+
+\begin{frame}{SQL Exercises -- Schema Overview}
+  \begin{block}{Supermarket Schema}
+    \small
+    \begin{itemize}
+      \item \textbf{Employee}(\underline{EmployeeID}, FirstName, LastName, Phone, DeptID\textsuperscript{FK}, HireDate)
+      \item \textbf{Department}(\underline{DeptID}, Name, Floor)
+      \item \textbf{Brand}(\underline{BrandID}, Name, Country, LegalForm)
+      \item \textbf{Product}(\underline{EAN}, Name, Brand\textsuperscript{FK}, Price, AlcoholContent, DeptID\textsuperscript{FK})
+      \item \textbf{Storage}(\underline{StorageID}, Floor, Capacity)
+      \item \textbf{StorageProduct}(\underline{StorageID\textsuperscript{FK}, EAN\textsuperscript{FK}}, Quantity)
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Music Schema}
+    \small
+    \begin{itemize}
+      \item \textbf{Artist}(\underline{ArtistID}, Name, Country, DebutYear)
+      \item \textbf{Album}(\underline{AlbumID}, Title, ArtistID\textsuperscript{FK}, Genre, ReleaseYear, RecordLabel)
+      \item \textbf{Track}(\underline{TrackID}, Title, AlbumID\textsuperscript{FK}, Duration, FeaturedArtistID\textsuperscript{FK} \textit{nullable})
+    \end{itemize}
+  \end{block}
+
+  These two schemas are used throughout all SQL exercises (Sections 9--12).
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 9A -- Supermarket -- Basic SELECT}
+
+\begin{frame}[fragile]{Exercise 9A -- Supermarket -- Basic SELECT}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Show all employee names and phone numbers.
+      \item Show all brand names and their legal forms.
+      \item Show the first 5 products ordered by name (alphabetically).
+      \item List all products with alcohol content $> 0$.
+      \item Show distinct EAN codes aliased as \texttt{barcode}.
+      \item Show the first 5 employees (use \texttt{LIMIT}).
+    \end{enumerate}
+  \end{block}
+
+  \begin{block}{Example}
+\begin{lstlisting}[style=sqlstyle]
+-- Task 1 example
+SELECT FirstName, LastName, Phone
+FROM Employee;
+\end{lstlisting}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Simple \quad Time: 10 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 9B -- Music -- Basic SELECT}
+
+\begin{frame}[fragile]{Exercise 9B -- Music -- Basic SELECT}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Show all album names and genres.
+      \item Show the first 3 record labels (distinct, alphabetically).
+      \item Show track titles aliased as \texttt{song}.
+      \item Show distinct countries of artists.
+      \item Show the first 5 artists.
+    \end{enumerate}
+  \end{block}
+
+  \begin{block}{Hints}
+\begin{lstlisting}[style=sqlstyle]
+-- Alias a column
+SELECT Title AS song FROM Track;
+
+-- Distinct values
+SELECT DISTINCT Country FROM Artist;
+
+-- Limit results
+SELECT Name FROM Artist LIMIT 5;
+\end{lstlisting}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Simple \quad Time: 10 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 9C -- Supermarket -- WHERE Clauses}
+
+\begin{frame}[fragile]{Exercise 9C -- Supermarket -- WHERE Clauses}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item List all brands from Germany.
+      \item List products not stored anywhere (no entry in StorageProduct).
+      \item List employees whose last name starts with \texttt{'N'}.
+      \item List products with alcohol content between 1\% and 20\%.
+      \item List brands that are a \texttt{GmbH} in Germany but \textbf{not} in Hamburg.
+    \end{enumerate}
+  \end{block}
+
+  \begin{block}{Useful Operators}
+\begin{lstlisting}[style=sqlstyle]
+-- Pattern matching
+WHERE LastName LIKE 'N%'
+
+-- Range filter
+WHERE AlcoholContent BETWEEN 1 AND 20
+
+-- Negation + multiple conditions
+WHERE Country = 'Germany'
+  AND LegalForm = 'GmbH'
+  AND City <> 'Hamburg'
+\end{lstlisting}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Simple \quad Time: 15 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 9D -- Music -- WHERE Clauses}
+
+\begin{frame}[fragile]{Exercise 9D -- Music -- WHERE Clauses}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item List all distinct genres in the Album table.
+      \item List songs that have a featured artist (\texttt{FeaturedArtistID} is not NULL).
+      \item List songs with a title starting with \texttt{'L'}.
+      \item List songs with duration between 2 and 3 minutes (120 and 180 seconds).
+      \item List all artists from the USA.
+    \end{enumerate}
+  \end{block}
+
+  \begin{block}{Hint}
+\begin{lstlisting}[style=sqlstyle]
+-- Check for NULL
+WHERE FeaturedArtistID IS NOT NULL
+
+-- Duration in seconds
+WHERE Duration BETWEEN 120 AND 180
+\end{lstlisting}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Simple \quad Time: 15 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 9E -- Supermarket -- Aggregation}
+
+\begin{frame}[fragile]{Exercise 9E -- Supermarket -- Aggregation}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Count the number of \textbf{distinct} countries of origin for brands.
+      \item Create price categories using \texttt{CASE WHEN}:
+        \begin{itemize}
+          \item Price $< 1.00$ \euro{} $\Rightarrow$ \texttt{'cheap'}
+          \item $1.00$--$5.00$ \euro{} $\Rightarrow$ \texttt{'medium'}
+          \item Price $> 5.00$ \euro{} $\Rightarrow$ \texttt{'expensive'}
+        \end{itemize}
+      \item Show the number of products per country and city, ordered by count descending.
+      \item Show the \textbf{average price} per department, excluding departments 1 and 2.
+      \item Show departments with at least \textbf{5 distinct barcodes} using \texttt{HAVING}.
+    \end{enumerate}
+  \end{block}
+
+  \begin{block}{Hint for Task 2}
+\begin{lstlisting}[style=sqlstyle]
+SELECT Name,
+  CASE WHEN Price < 1.00 THEN 'cheap'
+       WHEN Price <= 5.00 THEN 'medium'
+       ELSE 'expensive'
+  END AS PriceCategory
+FROM Product;
+\end{lstlisting}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Intermediate \quad Time: 20 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 9F -- Music -- Aggregation}
+
+\begin{frame}[fragile]{Exercise 9F -- Music -- Aggregation}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Show all distinct countries of record labels (i.e.\ all countries artists come from).
+      \item Categorize songs by duration using \texttt{CASE WHEN}:
+        \begin{itemize}
+          \item $< 120$ s $\Rightarrow$ \texttt{'short'}, \quad $120$--$240$ s $\Rightarrow$ \texttt{'medium'}, \quad $> 240$ s $\Rightarrow$ \texttt{'long'}
+        \end{itemize}
+      \item Count artists per country, ordered by count descending.
+      \item Show the total duration per album in seconds, excluding the \texttt{'Christmas'} genre.
+      \item Show artists who have at least \textbf{5 songs} using \texttt{HAVING}.
+    \end{enumerate}
+  \end{block}
+
+  \begin{block}{Hint for Task 5}
+\begin{lstlisting}[style=sqlstyle]
+SELECT ArtistID, COUNT(*) AS SongCount
+FROM Track
+  JOIN Album ON Track.AlbumID = Album.AlbumID
+GROUP BY ArtistID
+HAVING COUNT(*) >= 5;
+\end{lstlisting}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Intermediate \quad Time: 20 min}
+  \end{alertblock}
+\end{frame}
+
+% ============================================================
+\section{SQL -- JOINs}
+% ============================================================
+
+% ------------------------------------------------------------
+\subsection{Exercise 10A -- Music -- JOINs (Simple)}
+
+\begin{frame}[fragile]{Exercise 10A -- Music -- JOINs (Simple)}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item List all songs in the \texttt{'Pop'} genre (JOIN Track with Album).
+      \item List artists who have songs on Taylor Swift albums.
+      \item List all albums from an Australian artist.
+      \item Show each album with its artist name.
+      \item Show track names with album title \textbf{and} artist name (three-table join).
+    \end{enumerate}
+  \end{block}
+
+  \begin{block}{Reminder: JOIN syntax}
+\begin{lstlisting}[style=sqlstyle]
+-- INNER JOIN
+SELECT t.Title, a.Title AS Album
+FROM Track t
+  JOIN Album a ON t.AlbumID = a.AlbumID;
+
+-- THREE-TABLE JOIN
+SELECT t.Title, al.Title, ar.Name
+FROM Track t
+  JOIN Album al ON t.AlbumID = al.AlbumID
+  JOIN Artist ar ON al.ArtistID = ar.ArtistID;
+\end{lstlisting}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Simple \quad Time: 15 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 10B -- Music -- JOINs (Intermediate)}
+
+\begin{frame}[fragile]{Exercise 10B -- Music -- JOINs (Intermediate)}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item List all songs \textbf{not} in the \texttt{'Christmas'} genre.
+      \item List artists who have songs \textbf{shorter than 3 minutes} (180 s).
+      \item List artists who have \textbf{more than 5 albums}.
+      \item Show artists with their \textbf{total number of tracks}.
+      \item List albums that have \textbf{no tracks} (use \texttt{LEFT JOIN} + \texttt{IS NULL}).
+    \end{enumerate}
+  \end{block}
+
+  \begin{block}{Hint for Task 5 -- Finding albums with no tracks}
+\begin{lstlisting}[style=sqlstyle]
+SELECT al.Title
+FROM Album al
+  LEFT JOIN Track t ON al.AlbumID = t.AlbumID
+WHERE t.TrackID IS NULL;
+\end{lstlisting}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Intermediate \quad Time: 20 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 10C -- Supermarket -- JOINs (Intermediate)}
+
+\begin{frame}[fragile]{Exercise 10C -- Supermarket -- JOINs}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item List all products from \textbf{France} (join Brand and Product).
+      \item List products that are in storage but have \textbf{no department} assigned.
+      \item List \textbf{empty storage rooms} (no products stored there).
+      \item List \textbf{brands with no products}.
+      \item List employees who work in departments that have at least \textbf{3 products from the USA}.
+    \end{enumerate}
+  \end{block}
+
+  \begin{block}{Hint for Task 3}
+\begin{lstlisting}[style=sqlstyle]
+-- Empty storage rooms: LEFT JOIN + IS NULL
+SELECT s.StorageID, s.Floor
+FROM Storage s
+  LEFT JOIN StorageProduct sp
+         ON s.StorageID = sp.StorageID
+WHERE sp.EAN IS NULL;
+\end{lstlisting}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Intermediate \quad Time: 25 min}
+  \end{alertblock}
+\end{frame}
+
+% ============================================================
+\section{SQL -- INSERT / UPDATE / DELETE}
+% ============================================================
+
+% ------------------------------------------------------------
+\subsection{Exercise 11A -- INSERT -- Supermarket}
+
+\begin{frame}[fragile]{Exercise 11A -- INSERT -- Supermarket}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Insert a new department \texttt{'Bakery'} on floor 2 into the Department table.
+      \item Insert a new employee \texttt{'John Smith'} who works in the Bakery department (use the ID you just inserted).
+    \end{enumerate}
+  \end{block}
+
+  \begin{block}{Syntax Reminder}
+\begin{lstlisting}[style=sqlstyle]
+-- Full insert
+INSERT INTO table_name (col1, col2, col3)
+VALUES (val1, val2, val3);
+
+-- Insert using LAST_INSERT_ID() for FK
+INSERT INTO Employee (FirstName, LastName, DeptID)
+VALUES ('John', 'Smith', LAST_INSERT_ID());
+\end{lstlisting}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Simple \quad Time: 10 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 11B -- UPDATE -- Supermarket}
+
+\begin{frame}[fragile]{Exercise 11B -- UPDATE -- Supermarket}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Rename the department \texttt{'Non-food'} to \texttt{'Household'}.
+      \item Update the price of the product \texttt{'Coca Cola Zero'} to \texttt{1.29}.
+    \end{enumerate}
+  \end{block}
+
+  \begin{block}{Syntax Reminder}
+\begin{lstlisting}[style=sqlstyle]
+UPDATE table_name
+SET column = new_value
+WHERE condition;
+\end{lstlisting}
+  \end{block}
+
+  \begin{alertblock}{Always use WHERE with UPDATE!}
+    Without a \texttt{WHERE} clause, \textbf{every row} in the table will be updated.
+    Check your condition carefully before executing.
+  \end{alertblock}
+
+  \begin{alertblock}{Difficulty: Simple \quad Time: 10 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 11C -- DELETE -- Supermarket}
+
+\begin{frame}[fragile]{Exercise 11C -- DELETE -- Supermarket}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Delete the department \texttt{'Flowers and Gardening'}.
+      \item Delete the employee with last name \texttt{'Major'}.
+    \end{enumerate}
+  \end{block}
+
+  \begin{block}{Syntax Reminder}
+\begin{lstlisting}[style=sqlstyle]
+DELETE FROM table_name
+WHERE condition;
+\end{lstlisting}
+  \end{block}
+
+  \begin{alertblock}{Referential Integrity Warning}
+    Deleting a department that is referenced by employees will \textbf{fail} unless you:
+    \begin{itemize}
+      \item Delete the employees first (manual cascade).
+      \item Have defined \texttt{ON DELETE CASCADE} on the FK.
+      \item Set employee \texttt{DeptID} to \texttt{NULL} first (\texttt{ON DELETE SET NULL}).
+    \end{itemize}
+  \end{alertblock}
+
+  \begin{alertblock}{Difficulty: Simple \quad Time: 10 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 11D -- INSERT -- Music}
+
+\begin{frame}[fragile]{Exercise 11D -- INSERT -- Music}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Insert a new \textbf{Artist} of your choice into the Artist table.
+      \item Insert one of their \textbf{Albums} into the Album table (referencing the artist you just created).
+      \item Insert at least \textbf{3 Tracks} from that album into the Track table.
+    \end{enumerate}
+  \end{block}
+
+  \begin{block}{Remember to respect FK constraints}
+\begin{lstlisting}[style=sqlstyle]
+-- Step 1: insert artist
+INSERT INTO Artist (ArtistID, Name, Country, DebutYear)
+VALUES (999, 'My Artist', 'Germany', 2020);
+
+-- Step 2: insert album referencing that artist
+INSERT INTO Album (AlbumID, Title, ArtistID, Genre,
+                   ReleaseYear, RecordLabel)
+VALUES (888, 'My Album', 999, 'Pop', 2022, 'My Label');
+\end{lstlisting}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Simple \quad Time: 15 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 11E -- UPDATE -- Music}
+
+\begin{frame}[fragile]{Exercise 11E -- UPDATE -- Music}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Change the genre of album \texttt{'Fearless'} to \texttt{'Country Pop'}.
+      \item Change the record label of album \texttt{'Red'} to \texttt{'Republic Records'}.
+      \item Revert the change in task 2: set the record label of \texttt{'Red'} back to its original value.
+    \end{enumerate}
+  \end{block}
+
+  \begin{block}{Useful pattern -- check before updating}
+\begin{lstlisting}[style=sqlstyle]
+-- Always SELECT first to verify your WHERE clause
+SELECT AlbumID, Title, RecordLabel
+FROM Album
+WHERE Title = 'Red';
+
+-- Then UPDATE
+UPDATE Album
+SET RecordLabel = 'Republic Records'
+WHERE Title = 'Red';
+\end{lstlisting}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Simple \quad Time: 10 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 11F -- DELETE -- Music}
+
+\begin{frame}[fragile]{Exercise 11F -- DELETE -- Music}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Delete all tracks that \textbf{feature} the artist \texttt{'Blackpink'} (i.e.\ where \texttt{FeaturedArtistID} refers to Blackpink).
+      \item Delete the artist \texttt{'Ice Spice'} from the Artist table.\\
+            \textit{Note: handle FK constraints -- you may need to nullify or delete referencing rows first.}
+    \end{enumerate}
+  \end{block}
+
+  \begin{block}{Handling FK constraints before DELETE}
+\begin{lstlisting}[style=sqlstyle]
+-- Option A: nullify the featured artist reference first
+UPDATE Track
+SET FeaturedArtistID = NULL
+WHERE FeaturedArtistID = (
+  SELECT ArtistID FROM Artist WHERE Name = 'Ice Spice'
+);
+
+-- Then delete the artist
+DELETE FROM Artist WHERE Name = 'Ice Spice';
+\end{lstlisting}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Simple--Intermediate \quad Time: 15 min}
+  \end{alertblock}
+\end{frame}
+
+% ============================================================
+\section{SQL -- DDL}
+% ============================================================
+
+% ------------------------------------------------------------
+\subsection{Exercise 12A -- CREATE / ALTER -- Music}
+
+\begin{frame}[fragile]{Exercise 12A -- CREATE / ALTER -- Music}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Create a new table \textbf{Concert}(\underline{ConcertID}, ArtistID, Venue, City, Date, Capacity).
+      \item Add a \textbf{foreign key} constraint from \texttt{Concert.ArtistID} to \texttt{Artist.ArtistID}.
+      \item Add a column \texttt{Website} (\texttt{VARCHAR(200)}, nullable) to the \texttt{Artist} table.
+      \item Change the \texttt{Genre} column in \texttt{Album} to \texttt{VARCHAR(100)}.
+      \item Drop the \texttt{Country} column from \texttt{Artist}.
+    \end{enumerate}
+  \end{block}
+
+  \begin{block}{Syntax Reminder}
+\begin{lstlisting}[style=sqlstyle]
+CREATE TABLE Concert (
+  ConcertID INT PRIMARY KEY AUTO_INCREMENT,
+  ArtistID  INT NOT NULL,
+  Venue     VARCHAR(200),
+  City      VARCHAR(100),
+  Date      DATE,
+  Capacity  INT
+);
+
+ALTER TABLE Concert
+  ADD CONSTRAINT fk_concert_artist
+    FOREIGN KEY (ArtistID) REFERENCES Artist(ArtistID);
+
+ALTER TABLE Artist ADD COLUMN Website VARCHAR(200);
+ALTER TABLE Album  MODIFY COLUMN Genre VARCHAR(100);
+ALTER TABLE Artist DROP COLUMN Country;
+\end{lstlisting}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Simple \quad Time: 15 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 12B -- CREATE / ALTER -- Supermarket}
+
+\begin{frame}[fragile]{Exercise 12B -- CREATE / ALTER -- Supermarket}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Add columns \texttt{Salary} (\texttt{DECIMAL(10,2)}) and \texttt{HireDate} (\texttt{DATE}) to the \texttt{Employee} table.
+      \item Create a \textbf{Manager} table: (\underline{ManagerID}, EmployeeID\textsuperscript{FK}, Salary, StartDate).
+      \item Add a column \texttt{ManagerID} (nullable FK) to the \texttt{Department} table -- a department can have one manager.
+    \end{enumerate}
+  \end{block}
+
+  \begin{block}{Syntax Reminder}
+\begin{lstlisting}[style=sqlstyle]
+ALTER TABLE Employee
+  ADD COLUMN Salary   DECIMAL(10,2),
+  ADD COLUMN HireDate DATE;
+
+CREATE TABLE Manager (
+  ManagerID  INT PRIMARY KEY AUTO_INCREMENT,
+  EmployeeID INT NOT NULL,
+  Salary     DECIMAL(10,2),
+  StartDate  DATE,
+  CONSTRAINT fk_mgr_emp
+    FOREIGN KEY (EmployeeID) REFERENCES Employee(EmployeeID)
+);
+
+ALTER TABLE Department
+  ADD COLUMN ManagerID INT NULL,
+  ADD CONSTRAINT fk_dept_mgr
+    FOREIGN KEY (ManagerID) REFERENCES Manager(ManagerID);
+\end{lstlisting}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Simple \quad Time: 15 min}
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\subsection{Exercise 12C -- CREATE DATABASE from Scratch}
+
+\begin{frame}[fragile]{Exercise 12C -- Cinema Management Database}
+  \begin{block}{Tasks}
+    \begin{enumerate}
+      \item Create a database named \texttt{cinema\_management}.
+      \item Create table \textbf{Movie}(\underline{MovieID} AUTO\_INCREMENT, Title, Genre, Duration, Rating DECIMAL, ReleaseYear).
+      \item Create table \textbf{Cinema}(\underline{CinemaID}, Name, City, Screens INT).
+      \item Create table \textbf{Screening}(\underline{ScreeningID}, MovieID\textsuperscript{FK}, CinemaID\textsuperscript{FK}, ScreeningDate DATE, StartTime TIME, Seats INT, Price DECIMAL).
+      \item Add all appropriate constraints (\texttt{NOT NULL}, \texttt{CHECK}, \texttt{DEFAULT}).
+    \end{enumerate}
+  \end{block}
+
+  \begin{block}{Partial Skeleton}
+\begin{lstlisting}[style=sqlstyle]
+CREATE DATABASE cinema_management;
+USE cinema_management;
+
+CREATE TABLE Movie (
+  MovieID     INT PRIMARY KEY AUTO_INCREMENT,
+  Title       VARCHAR(255) NOT NULL,
+  Genre       VARCHAR(100),
+  Duration    INT CHECK (Duration > 0),
+  Rating      DECIMAL(3,1),
+  ReleaseYear INT
+);
+-- continue with Cinema and Screening ...
+\end{lstlisting}
+  \end{block}
+
+  \begin{alertblock}{Difficulty: Intermediate \quad Time: 25 min}
+  \end{alertblock}
+\end{frame}
+
+% ============================================================
+\section{Group Exercise}
+% ============================================================
+
+% ------------------------------------------------------------
+\subsection{Exercise 13 -- One-Pager Presentation}
+
+\begin{frame}{Exercise 13 -- One-Pager Presentation}
+  \begin{block}{Instructions}
+    Form groups of \textbf{2--3 students}. Each group picks \textbf{one} of the topics below and prepares a \textbf{5-minute presentation}.
+  \end{block}
+
+  \begin{block}{Option A: Concurrency Problems}
+    Explain \textbf{Lost Update}, \textbf{Dirty Read}, and \textbf{Phantom Read} with concrete, realistic examples. What transaction isolation level prevents each problem?
+  \end{block}
+
+  \begin{block}{Option B: CAP Theorem}
+    Explain the three properties (\textbf{Consistency}, \textbf{Availability}, \textbf{Partition Tolerance}) and the trade-offs. Give real-world database examples for each combination (CA, CP, AP).
+  \end{block}
+
+  \begin{block}{Option C: BASE vs.\ ACID}
+    Compare the two consistency models. Explain when each is appropriate. Give concrete examples of systems that use ACID and systems that use BASE.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Exercise 13 -- Requirements}
+  \begin{block}{Deliverables}
+    \begin{enumerate}
+      \item \textbf{One-pager}: maximum one A4 page to serve as handout / visual aid for classmates.
+        \begin{itemize}
+          \item Must be self-contained: someone who hasn't studied the topic should understand the key ideas.
+          \item Include at least one concrete example.
+        \end{itemize}
+      \item \textbf{Presentation}: exactly 5 minutes (use a timer).
+        \begin{itemize}
+          \item All group members must speak.
+          \item Explain the concept, not just list definitions.
+        \end{itemize}
+    \end{enumerate}
+  \end{block}
+
+  \begin{block}{Evaluation Criteria}
+    \begin{itemize}
+      \item Correctness and completeness of the content.
+      \item Clarity of explanation to peers.
+      \item Quality and usefulness of the one-pager.
+      \item Adherence to the 5-minute time limit.
+    \end{itemize}
+  \end{block}
+
+  \begin{alertblock}{Preparation time: 20 minutes \quad Presentations: in class}
+  \end{alertblock}
+\end{frame}
+
+\end{document}

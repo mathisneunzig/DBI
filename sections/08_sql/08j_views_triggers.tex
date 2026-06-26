@@ -1,35 +1,196 @@
 % ----------------------------------------------------------
-\begin{frame}[fragile]{VIEW, TRIGGER, PROCEDURE \textbf{(!)}}
-  \begin{block}{Advanced Database Objects}
-\begin{lstlisting}[style=sqlstyle]
--- VIEW: a virtual table based on a SELECT
-CREATE VIEW expensive_products AS
-SELECT * FROM product WHERE price > 10;
-DROP VIEW expensive_products;
+\begin{frame}{Views -- What and Why}
+  A \textbf{VIEW} is a named, stored \texttt{SELECT} query that behaves like a virtual table.
+  The underlying data is not duplicated -- the view runs its query fresh on every access.
 
--- TRIGGER: automatically execute SQL on a data change
-CREATE TRIGGER set_default_bbd
-BEFORE INSERT ON stock
-FOR EACH ROW
-SET NEW.best_before_date = DATE_ADD(NOW(), INTERVAL 30 DAY);
-
--- STORED PROCEDURE: a reusable, named SQL block
-DELIMITER //
-CREATE PROCEDURE raise_prices(IN pct DECIMAL(5,2))
-BEGIN
-    UPDATE product SET price = price * (1 + pct/100);
-END//
-DELIMITER ;
-CALL raise_prices(10.0);
-\end{lstlisting}
+  \begin{block}{Why Use Views?}
+    \begin{itemize}
+      \item \textbf{Simplify complex queries}: wrap a multi-table JOIN into a single named view;
+            application code just selects from the view.
+      \item \textbf{Access control}: expose only specific columns/rows to certain users without
+            granting access to the underlying tables.
+      \item \textbf{Logical abstraction}: rename or reformat columns without changing the schema.
+      \item \textbf{Backward compatibility}: when a table is restructured, a view with the old
+            column names can shield existing applications from breaking changes.
+    \end{itemize}
   \end{block}
 
+  \begin{alertblock}{Views are Not Materialized (by default)}
+    A standard view re-executes its query every time it is accessed. For performance-critical
+    use, some DBMS (PostgreSQL, Oracle) offer \textbf{materialized views} that cache results.
+    MySQL does not natively support materialized views.
+  \end{alertblock}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{Creating and Using Views}
+  \begin{lstlisting}[style=sqlstyle]
+-- Create a view: all tracks with artist and album info
+CREATE VIEW v_track_details AS
+SELECT t.title   AS track_title,
+       t.duration_sec,
+       al.title  AS album_title,
+       al.year,
+       ar.name   AS artist_name
+FROM   Track  AS t
+JOIN   Album  AS al ON t.album_id   = al.id
+JOIN   Artist AS ar ON al.artist_id = ar.id;
+
+-- Use the view like a regular table
+SELECT * FROM v_track_details WHERE artist_name = 'Aurora';
+
+-- Remove the view
+DROP VIEW IF EXISTS v_track_details;
+  \end{lstlisting}
+
+  \begin{block}{Updatable Views}
+    Simple views (single table, no GROUP BY, no DISTINCT) can be used with
+    \texttt{INSERT} / \texttt{UPDATE} / \texttt{DELETE}. Complex views with JOINs
+    or aggregations are read-only.
+  \end{block}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{Triggers -- Concept and Syntax}
+  A \textbf{TRIGGER} is a stored procedure that the DBMS executes \emph{automatically}
+  in response to an \texttt{INSERT}, \texttt{UPDATE}, or \texttt{DELETE} on a specific table.
+
+  \begin{lstlisting}[style=sqlstyle]
+CREATE TRIGGER trigger_name
+  { BEFORE | AFTER }
+  { INSERT | UPDATE | DELETE }
+  ON table_name
+  FOR EACH ROW
+BEGIN
+  -- SQL statements using NEW.col and/or OLD.col
+END;
+  \end{lstlisting}
+
+  \begin{block}{NEW and OLD}
+    \begin{itemize}
+      \item \texttt{NEW.column} -- the new value being inserted or the updated value.
+      \item \texttt{OLD.column} -- the value that existed before the update or deletion.
+      \item \texttt{BEFORE INSERT}: only \texttt{NEW} available.
+      \item \texttt{BEFORE UPDATE}: both \texttt{OLD} and \texttt{NEW} available.
+      \item \texttt{AFTER DELETE}: only \texttt{OLD} available.
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{Trigger Example -- BEFORE INSERT}
+  \textbf{Requirement:} Automatically set a track's \texttt{created\_at} timestamp and
+  normalise its title to trimmed title case before inserting.
+
+  \begin{lstlisting}[style=sqlstyle]
+DELIMITER //
+CREATE TRIGGER trg_track_before_insert
+BEFORE INSERT ON Track
+FOR EACH ROW
+BEGIN
+    -- Ensure duration is never negative
+    IF NEW.duration_sec < 0 THEN
+        SET NEW.duration_sec = 0;
+    END IF;
+
+    -- Trim whitespace from the title automatically
+    SET NEW.title = TRIM(NEW.title);
+END //
+DELIMITER ;
+
+-- Test it:
+INSERT INTO Track (title, duration_sec, album_id)
+VALUES ('  Running With the Wolves  ', -5, 1);
+-- Stored as: title='Running With the Wolves', duration_sec=0
+  \end{lstlisting}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{Trigger Example -- AFTER INSERT (Audit Log)}
+  \textbf{Requirement:} Record every new track insertion in an audit table.
+
+  \begin{lstlisting}[style=sqlstyle]
+-- Create an audit table first
+CREATE TABLE Track_Audit (
+    id         INT AUTO_INCREMENT PRIMARY KEY,
+    track_id   INT,
+    action     VARCHAR(10),
+    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+DELIMITER //
+CREATE TRIGGER trg_track_after_insert
+AFTER INSERT ON Track
+FOR EACH ROW
+BEGIN
+    INSERT INTO Track_Audit (track_id, action)
+    VALUES (NEW.id, 'INSERT');
+END //
+DELIMITER ;
+  \end{lstlisting}
+
+  \begin{block}{BEFORE vs AFTER}
+    Use \texttt{BEFORE} to validate or modify values before they are saved.
+    Use \texttt{AFTER} for side effects (audit logs, cascading updates to other tables).
+  \end{block}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{Stored Procedures}
+  A \textbf{STORED PROCEDURE} is a named, reusable block of SQL stored in the database.
+  It can accept parameters, contain control-flow logic, and return result sets.
+
+  \begin{lstlisting}[style=sqlstyle]
+DELIMITER //
+CREATE PROCEDURE add_track(
+    IN  p_title        VARCHAR(200),
+    IN  p_duration_sec INT,
+    IN  p_album_id     INT,
+    OUT p_new_id       INT
+)
+BEGIN
+    INSERT INTO Track (title, duration_sec, album_id)
+    VALUES (p_title, p_duration_sec, p_album_id);
+
+    SET p_new_id = LAST_INSERT_ID();
+END //
+DELIMITER ;
+
+-- Call the procedure
+CALL add_track('Runaway', 237, 3, @new_track_id);
+SELECT @new_track_id;  -- retrieve the OUT parameter
+  \end{lstlisting}
+
   \begin{itemize}
-    \item A \textbf{VIEW} simplifies complex queries and can restrict which
-          columns users see (a basic access-control technique).
-    \item A \textbf{TRIGGER} enforces business rules automatically without
-          relying on application code.
-    \item A \textbf{STORED PROCEDURE} encapsulates reusable logic server-side,
-          reducing network round-trips and duplicated application code.
+    \item Reduces network round-trips: logic runs server-side.
+    \item \texttt{IN}: input parameter \quad \texttt{OUT}: output parameter \quad \texttt{INOUT}: both.
   \end{itemize}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Views, Triggers, and Procedures -- Comparison}
+  \begin{center}
+  \renewcommand{\arraystretch}{1.35}
+  \begin{tabularx}{\linewidth}{@{}lXX@{}}
+    \toprule
+    \textbf{Object} & \textbf{Purpose} & \textbf{When to Use} \\
+    \midrule
+    \textbf{VIEW}
+      & Virtual table wrapping a SELECT query
+      & Simplify queries; restrict column access; logical abstraction \\[4pt]
+    \textbf{TRIGGER}
+      & Auto-execute SQL on INSERT/UPDATE/DELETE
+      & Enforce business rules; maintain audit logs; cascade custom logic \\[4pt]
+    \textbf{STORED PROCEDURE}
+      & Reusable named SQL block with parameters
+      & Encapsulate multi-step operations; reduce client-server round-trips \\
+    \bottomrule
+  \end{tabularx}
+  \end{center}
+
+  \begin{alertblock}{Caution with Triggers}
+    Triggers execute invisibly -- a DML statement may have hidden side effects that are hard to
+    debug. Document triggers clearly, and avoid complex business logic that belongs in the
+    application layer.
+  \end{alertblock}
 \end{frame}

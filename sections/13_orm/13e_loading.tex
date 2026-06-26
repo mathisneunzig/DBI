@@ -1,31 +1,103 @@
 % ----------------------------------------------------------
 \begin{frame}[fragile]{ORM -- Lazy vs Eager Loading}
-  When an \texttt{Employee} entity has a \texttt{@ManyToOne} link to
-  \texttt{Department}, the ORM must decide \emph{when} to load the related
-  object.
+  When an entity has a relationship to another entity, the ORM must decide
+  \emph{when} to load the related object from the database.
 
-  \begin{block}{Two loading strategies}
+  \begin{block}{Two Loading Strategies}
     \begin{itemize}
-      \item \textbf{EAGER loading}: the related entity is loaded
-            \emph{immediately} together with the parent, always via a
-            \texttt{JOIN}. Simple but can load far more data than needed.
-      \item \textbf{LAZY loading}: the related entity is loaded
-            \emph{on first access} (a second query is issued only when
-            \texttt{employee.getDepartment()} is called). Default for
-            \texttt{@OneToMany} and \texttt{@ManyToMany} in JPA.
+      \item \textbf{EAGER loading}: the related entity is loaded \emph{immediately} together
+            with the parent, via a SQL \texttt{JOIN}. Simple but can load far more data than needed.
+            \textbf{Default for \texttt{@ManyToOne} and \texttt{@OneToOne}}.
+      \item \textbf{LAZY loading}: the related entity is loaded \emph{on first access} (a second
+            query is issued only when \texttt{album.getTracks()} is called).
+            \textbf{Default for \texttt{@OneToMany} and \texttt{@ManyToMany}}.
     \end{itemize}
   \end{block}
 
   \begin{lstlisting}[style=sqlstyle, language=Java]
-@ManyToOne(fetch = FetchType.LAZY)   // default for *ToOne is EAGER
-@JoinColumn(name = "department_id")
-private Department department;
+// Override the default strategy:
+@ManyToOne(fetch = FetchType.LAZY)    // LAZY for *ToOne
+@JoinColumn(name = "artist_id")
+private Artist artist;
+
+@OneToMany(mappedBy = "album", fetch = FetchType.EAGER)
+private List<Track> tracks;           // EAGER for *ToMany (rare!)
+  \end{lstlisting}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{The N+1 Problem -- Explained}
+  The N+1 problem is the most common ORM performance pitfall.
+
+  \begin{lstlisting}[style=sqlstyle, language=Java]
+// Suppose we load all albums (1 query):
+List<Album> albums = albumRepo.findAll();   // SELECT * FROM album
+
+// Then we iterate and access each album's artist (LAZY):
+for (Album album : albums) {
+    System.out.println(album.getArtist().getName());
+    // Each call fires: SELECT * FROM artist WHERE id = ?
+}
+// With 100 albums -> 1 + 100 = 101 queries!  (N+1 problem)
   \end{lstlisting}
 
-  \begin{alertblock}{Lazy loading and the N+1 problem}
-    LAZY loading is the root cause of the N+1 query problem in ORM frameworks.
-    When iterating over a list of employees and accessing \texttt{getDepartment()}
-    inside the loop, each call fires a separate SQL query.
-    Fix: use a \texttt{JOIN FETCH} query or enable eager loading for that use case.
+  \begin{alertblock}{Why Is This a Problem?}
+    With 1000 albums, you execute 1001 database queries instead of 1 or 2.
+    Each query has network latency, parse overhead, and execution cost.
+    In production with millions of records, this can bring an application to its knees.
   \end{alertblock}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{Fixing the N+1 Problem -- JOIN FETCH}
+  \begin{lstlisting}[style=sqlstyle, language=Java]
+// Fix 1: JOIN FETCH in JPQL -- loads everything in ONE query
+public interface AlbumRepository extends JpaRepository<Album, Long> {
+
+    @Query("SELECT al FROM Album al JOIN FETCH al.artist")
+    List<Album> findAllWithArtist();
+    // Generates: SELECT al.*, ar.* FROM album al
+    //            JOIN artist ar ON al.artist_id = ar.id
+}
+
+// Fix 2: EntityGraph -- declarative eager loading for a query
+@EntityGraph(attributePaths = {"artist", "tracks"})
+List<Album> findByYear(int year);
+// Loads albums + their artists + their tracks in one shot
+  \end{lstlisting}
+
+  \begin{block}{Rule of Thumb}
+    \begin{itemize}
+      \item Default: use \texttt{LAZY} on all relationships.
+      \item For specific queries where you \emph{know} you need related data: use
+            \texttt{JOIN FETCH} or \texttt{@EntityGraph}.
+      \item \textbf{Never} change a relationship to \texttt{EAGER} globally just to fix an N+1
+            -- it will cause over-fetching everywhere else.
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Loading Strategies -- Comparison}
+  \begin{center}
+  \renewcommand{\arraystretch}{1.35}
+  \begin{tabularx}{\linewidth}{@{}lXX@{}}
+    \toprule
+    \textbf{Strategy}  & \textbf{When data is loaded} & \textbf{Risk} \\
+    \midrule
+    EAGER (default @ManyToOne)
+      & Always, immediately with the parent -- even if never used
+      & Over-fetching; cartesian product explosion with multiple EAGER collections \\[4pt]
+    LAZY (default @OneToMany)
+      & On first access via getter
+      & N+1 queries if accessed in a loop; \texttt{LazyInitializationException} outside session \\[4pt]
+    JOIN FETCH (query-level)
+      & Only for this specific query
+      & Best practice; no global side effects \\[4pt]
+    @EntityGraph
+      & Declared per query/method
+      & Best practice; declarative and reusable \\
+    \bottomrule
+  \end{tabularx}
+  \end{center}
 \end{frame}

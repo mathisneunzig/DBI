@@ -1,34 +1,118 @@
-\begin{frame}[fragile]{Jakarta Persistence API (JPA)}
-  \begin{block}{JPA -- formerly Java Persistence API}
-    The \textbf{standard Java/Jakarta EE specification} for ORM. JPA defines the annotations and
-    programming model; \textbf{Hibernate} is by far the most popular implementation. Using JPA
-    keeps your code vendor-neutral -- you could switch from Hibernate to EclipseLink with minimal
-    changes.
+\begin{frame}[fragile]{Jakarta Persistence API (JPA) -- Overview}
+  \begin{block}{JPA -- Jakarta Persistence API}
+    The \textbf{standard Java/Jakarta EE specification} for ORM.
+    JPA defines the annotations and programming model.
+    \textbf{Hibernate} is by far the most popular implementation.
+    Using JPA annotations keeps your code vendor-neutral.
   \end{block}
 
   \begin{lstlisting}[style=sqlstyle, language=Java]
-@Entity
-@Table(name = "employee")
-public class Employee {
+@Entity                          // maps this class to a DB table
+@Table(name = "artist")          // explicit table name
+public class Artist {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;             // AUTO_INCREMENT primary key
+
+    @Column(name = "name", nullable = false, length = 150)
+    private String name;
+
+    @Column(name = "country", length = 2)
+    private String country;
+
+    @OneToMany(mappedBy = "artist", cascade = CascadeType.ALL,
+               fetch = FetchType.LAZY)
+    private List<Album> albums = new ArrayList<>();
+}
+  \end{lstlisting}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{JPA -- @ManyToOne and @OneToMany}
+  \begin{lstlisting}[style=sqlstyle, language=Java]
+@Entity
+@Table(name = "album")
+public class Album {
+
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "first_name", nullable = false)
-    private String firstName;
+    @Column(nullable = false)
+    private String title;
 
-    @ManyToOne
-    @JoinColumn(name = "department_id")
-    private Department department;
+    private int year;
+
+    // Many Albums belong to one Artist -- foreign key column
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "artist_id", nullable = false)
+    private Artist artist;           // navigable reference
+
+    // One Album has many Tracks
+    @OneToMany(mappedBy = "album", cascade = CascadeType.ALL,
+               orphanRemoval = true)
+    private List<Track> tracks = new ArrayList<>();
 }
   \end{lstlisting}
 
   \begin{itemize}
-    \item \texttt{@Entity} -- this class maps to a database table.
-    \item \texttt{@Id} + \texttt{@GeneratedValue} -- auto-incrementing primary key.
-    \item \texttt{@Column} -- maps the field to a specific column with constraints.
-    \item \texttt{@ManyToOne} + \texttt{@JoinColumn} -- defines a foreign key relationship;
-          JPA generates the correct \texttt{JOIN} automatically when the department is accessed.
+    \item \texttt{@JoinColumn(name="artist\_id")} -- names the FK column in the DB.
+    \item \texttt{mappedBy="album"} -- the \texttt{Album} side owns the relationship.
+    \item \texttt{orphanRemoval=true} -- deleting an Album also deletes its Tracks.
   \end{itemize}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{JPA -- @ManyToMany}
+  \begin{lstlisting}[style=sqlstyle, language=Java]
+@Entity
+public class Track {
+
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private String title;
+
+    private int durationSec;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "album_id", nullable = false)
+    private Album album;
+
+    // A Track can appear on many Playlists; a Playlist has many Tracks
+    @ManyToMany(mappedBy = "tracks")
+    private Set<Playlist> playlists = new HashSet<>();
+}
+  \end{lstlisting}
+
+  \begin{block}{@ManyToMany -- Join Table}
+    JPA automatically creates (or maps to) a \textbf{join table}
+    (e.g.\ \texttt{playlist\_track(playlist\_id, track\_id)}) for many-to-many relationships.
+    Use \texttt{@JoinTable} annotation to control the join table name and column names.
+  \end{block}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{JPA Annotations -- Quick Reference}
+  \begin{center}
+  \renewcommand{\arraystretch}{1.3}
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    \textbf{Annotation} & \textbf{Purpose} \\
+    \midrule
+    \texttt{@Entity}               & Marks class as a DB-mapped entity \\
+    \texttt{@Table(name=...)}      & Specifies table name (optional) \\
+    \texttt{@Id}                   & Marks the primary key field \\
+    \texttt{@GeneratedValue}       & Strategy for PK generation (IDENTITY, SEQUENCE, \ldots) \\
+    \texttt{@Column}               & Maps field to column; sets nullable, length, unique \\
+    \texttt{@ManyToOne}            & N-to-1 relationship; FK in this entity's table \\
+    \texttt{@OneToMany}            & 1-to-N relationship; FK in the other table \\
+    \texttt{@ManyToMany}           & M-to-N relationship; requires a join table \\
+    \texttt{@JoinColumn}           & Specifies the FK column name \\
+    \texttt{@JoinTable}            & Specifies join table for ManyToMany \\
+    \texttt{@Transient}            & Field is NOT persisted to the DB \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
 \end{frame}

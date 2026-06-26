@@ -1,25 +1,63 @@
-\begin{frame}{ORM -- Why Use It?}
-  \begin{itemize}
-    \item \textbf{Built-in SQL injection protection}: ORMs use parameterised queries internally --
-          SQL is \emph{never} constructed by string concatenation. Correctly used, an ORM makes
-          SQL injection structurally impossible.
-    \item \textbf{Developer productivity}: instead of writing repetitive \texttt{INSERT},
-          \texttt{UPDATE}, \texttt{SELECT} boilerplate, you call methods like
-          \texttt{repository.save(employee)} or \texttt{repository.findById(42)}.
-    \item \textbf{Database portability}: the ORM abstracts away DBMS-specific SQL dialects.
-          Switching from MySQL to PostgreSQL often requires only a configuration change, not
-          rewriting queries.
-    \item \textbf{Schema-as-code}: the database schema is defined as Java/Python/C\# classes.
-          Changes can be tracked in version control alongside application code; migrations can be
-          generated automatically.
-    \item \textbf{Relationships handled automatically}: \texttt{@ManyToOne}, \texttt{@OneToMany}
-          annotations define join behaviour; the ORM generates the correct JOIN queries
-          transparently.
-  \end{itemize}
+\begin{frame}{ORM -- Pros and Cons}
+  \begin{columns}[T]
+    \column{0.50\linewidth}
+      \begin{block}{Advantages}
+        \begin{itemize}
+          \item \textbf{SQL Injection protection}: ORMs use parameterised
+                queries internally -- injection is structurally impossible
+                when used correctly.
+          \item \textbf{Developer productivity}: no repetitive
+                \texttt{INSERT}/\texttt{UPDATE} boilerplate; call
+                \texttt{repo.save(entity)} instead.
+          \item \textbf{Database portability}: switching from MySQL to
+                PostgreSQL often requires only a config change.
+          \item \textbf{Schema-as-code}: the DB schema is defined as Java
+                classes and tracked in version control.
+          \item \textbf{Automatic relationships}: \texttt{@ManyToOne}
+                annotations generate correct JOINs transparently.
+        \end{itemize}
+      \end{block}
 
-  \begin{alertblock}{Trade-offs}
-    ORMs can generate suboptimal or overly complex SQL for non-trivial queries. For
-    performance-critical operations (bulk inserts, complex aggregations), dropping down to
-    \textbf{native SQL} through the ORM's escape hatch is common and recommended.
-  \end{alertblock}
+    \column{0.48\linewidth}
+      \begin{alertblock}{Disadvantages / Trade-offs}
+        \begin{itemize}
+          \item \textbf{Suboptimal SQL}: generated queries can be verbose,
+                inefficient, or include unnecessary JOINs.
+          \item \textbf{N+1 problem}: lazy loading can trigger hundreds
+                of queries unnoticed (covered in section 13e).
+          \item \textbf{Learning curve}: JPA/Hibernate has many
+                configuration options and subtle behaviours.
+          \item \textbf{Abstraction leakage}: complex queries (window
+                functions, CTEs) are hard to express in JPQL and
+                require native SQL fallback.
+          \item \textbf{Over-fetching}: loading full entities when only
+                one column is needed wastes memory and bandwidth.
+        \end{itemize}
+      \end{alertblock}
+  \end{columns}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{ORM vs Raw SQL -- When to Use What}
+  \begin{center}
+  \renewcommand{\arraystretch}{1.3}
+  \begin{tabularx}{\linewidth}{@{}lXX@{}}
+    \toprule
+    \textbf{Scenario} & \textbf{ORM} & \textbf{Raw SQL} \\
+    \midrule
+    Standard CRUD       & Excellent -- minimal code & Unnecessary boilerplate \\
+    Simple lookups      & Great (\texttt{findBy...}) & Overkill \\
+    Complex aggregations & Awkward JPQL & Better -- native SQL \\
+    Bulk inserts (10k+) & Slow (entity-by-entity) & Use \texttt{LOAD DATA} or batch JDBC \\
+    Window functions    & Not supported in JPQL & Required \\
+    Reporting queries   & Poor -- generates many JOINs & Direct SQL or views \\
+    \bottomrule
+  \end{tabularx}
+  \end{center}
+
+  \begin{block}{Best Practice: Mix Both}
+    Use the ORM for standard CRUD and relationship navigation.
+    Drop down to native SQL (via \texttt{@Query(nativeQuery=true)} in Spring Data or
+    \texttt{EntityManager.createNativeQuery()}) for performance-critical operations.
+  \end{block}
 \end{frame}

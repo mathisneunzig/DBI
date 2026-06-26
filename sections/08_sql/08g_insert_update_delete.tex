@@ -1,95 +1,189 @@
-\subsection{Data Definition Language}
-\begin{frame}[fragile]{INSERT INTO}
-  \begin{block}{Adding Rows to a Table}
-\begin{lstlisting}[style=sqlstyle]
--- Insert a single row (explicit column list)
-INSERT INTO unit (id, name) VALUES ('T', 'ton');
+\subsection{Data Manipulation Language}
 
--- Insert multiple rows at once
-INSERT INTO unit (id, name)
-VALUES ('KG', 'kilogram'),
-       ('G',  'gram'),
-       ('L',  'litre');
+% ----------------------------------------------------------
+\begin{frame}[fragile]{INSERT INTO -- Single and Multiple Rows}
+  \begin{lstlisting}[style=sqlstyle]
+-- Insert a single row (explicit column list -- always preferred)
+INSERT INTO Artist (name, country)
+VALUES ('Aurora', 'Norway');
 
--- Insert from a SELECT result
-INSERT INTO archive_orders
-SELECT * FROM orders WHERE order_date < '2020-01-01';
-\end{lstlisting}
-  \end{block}
+-- Insert multiple rows in one statement (more efficient)
+INSERT INTO Album (title, year, artist_id)
+VALUES ('All My Demons Greeting Me as a Friend', 2016, 1),
+       ('Infections of a Different Kind',        2018, 1),
+       ('The Gods We Can Touch',                 2022, 1);
+  \end{lstlisting}
 
   \begin{itemize}
-    \item Columns not listed in the column list receive their
-          \texttt{DEFAULT} value, or \texttt{NULL} if no default is defined.
-    \item \texttt{AUTO\_INCREMENT} columns (typically the primary key) are
-          \textbf{omitted} from the column list -- the database assigns the
-          next integer value automatically.
-    \item When inserting into a table with \textbf{foreign key constraints},
-          the referenced row must already exist -- otherwise the insert is
-          rejected with a constraint violation error.
+    \item Always list columns explicitly -- omitting them ties your code to the current
+          column order, which breaks if the schema changes later.
+    \item Columns not listed receive their \texttt{DEFAULT} value, or \texttt{NULL}.
+    \item \texttt{AUTO\_INCREMENT} / \texttt{SERIAL} columns are omitted -- the DBMS assigns the next value.
   \end{itemize}
 \end{frame}
 
 % ----------------------------------------------------------
-\begin{frame}[fragile]{UPDATE}
-  \begin{block}{Modifying Existing Rows}
-\begin{lstlisting}[style=sqlstyle]
--- Update one column for a specific row
-UPDATE employee
-SET last_name = 'Miller'
-WHERE id = 12;
+\begin{frame}[fragile]{INSERT INTO -- From a SELECT}
+  \begin{lstlisting}[style=sqlstyle]
+-- Populate an archive table from a SELECT result
+INSERT INTO Album_Archive (id, title, year, artist_id)
+SELECT id, title, year, artist_id
+FROM   Album
+WHERE  year < 2000;
+
+-- Copy a table structure and data in one step (MySQL)
+CREATE TABLE Album_Backup AS
+SELECT * FROM Album;
+  \end{lstlisting}
+
+  \begin{block}{Use Cases}
+    \begin{itemize}
+      \item Archiving old records before purging them from the live table.
+      \item Seeding a test or staging database from production data.
+      \item Aggregating data from multiple tables into a summary table.
+    \end{itemize}
+  \end{block}
+
+  \begin{alertblock}{Foreign Key Pitfall}
+    When inserting into a table with foreign key constraints, the referenced row
+    \textbf{must already exist}, otherwise the insert is rejected with a constraint violation.
+  \end{alertblock}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{UPDATE -- Modifying Rows}
+  \begin{lstlisting}[style=sqlstyle]
+-- Update a single column for one specific row
+UPDATE Artist
+SET    country = 'Norway'
+WHERE  id = 1;
 
 -- Update multiple columns using expressions
-UPDATE product
-SET price         = price * 1.1,
-    last_modified = NOW()
-WHERE brand_id = 5;
+UPDATE Album
+SET    title        = UPPER(title),
+       last_modified = NOW()
+WHERE  year < 1990;
 
--- DANGER: UPDATE without WHERE affects ALL rows!
-UPDATE product SET price = 0; -- sets every product's price to zero!
-\end{lstlisting}
-  \end{block}
+-- DANGER: UPDATE without WHERE modifies ALL rows!
+UPDATE Album SET year = 0;  -- every album's year is now 0!
+  \end{lstlisting}
 
   \begin{alertblock}{Always Include a WHERE Clause}
-    An \texttt{UPDATE} without \texttt{WHERE} modifies \textbf{every single
-    row} in the table.  Before running any \texttt{UPDATE}, test your
-    \texttt{WHERE} condition with a \texttt{SELECT} first to confirm you
-    are targeting exactly the right rows.  Consider enabling
-    \texttt{SET SQL\_SAFE\_UPDATES = 1} in MySQL to prevent accidental
-    full-table updates.
+    An \texttt{UPDATE} without \texttt{WHERE} modifies \textbf{every single row} in the table.
+    \textbf{Before running any UPDATE}, test your \texttt{WHERE} condition with a \texttt{SELECT}
+    first to confirm you are targeting the right rows.
   \end{alertblock}
 \end{frame}
 
 % ----------------------------------------------------------
-\begin{frame}[fragile]{DELETE}
-  \begin{block}{Removing Rows from a Table}
-\begin{lstlisting}[style=sqlstyle]
--- Delete specific rows
-DELETE FROM employee WHERE department_id = 5;
+\begin{frame}[fragile]{UPDATE -- Common Pitfalls}
+  \begin{lstlisting}[style=sqlstyle]
+-- Pitfall 1: updating the wrong rows (forgetting WHERE)
+UPDATE Track SET duration_sec = 0;  -- ALL tracks set to 0!
 
--- Delete with JOIN condition (MySQL syntax)
-DELETE product
-FROM product
-INNER JOIN brand ON product.brand_id = brand.id
-WHERE brand.country = 'USA';
+-- Pitfall 2: self-referential update (reads old value first)
+UPDATE Album SET year = year + 1;   -- fine, reads then writes
 
--- DANGER: DELETE without WHERE empties the table!
-DELETE FROM employee; -- removes every row!
-\end{lstlisting}
+-- Pitfall 3: using a column alias in SET (not allowed)
+UPDATE Track SET len = duration_sec / 60;  -- ERROR if 'len' is alias
+
+-- SAFE: verify first with SELECT
+SELECT id, title FROM Track WHERE duration_sec < 30;
+-- Only then:
+DELETE FROM Track WHERE duration_sec < 30;
+  \end{lstlisting}
+
+  \begin{block}{Safe UPDATE Workflow}
+    \begin{enumerate}
+      \item Run the same \texttt{WHERE} clause as a \texttt{SELECT} first
+      \item Review the result set -- is this exactly what you want to change?
+      \item Enable \texttt{SET SQL\_SAFE\_UPDATES = 1} in MySQL to reject unsafe updates
+      \item Wrap in a transaction so you can \texttt{ROLLBACK} if needed
+    \end{enumerate}
   \end{block}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{DELETE -- Removing Rows}
+  \begin{lstlisting}[style=sqlstyle]
+-- Delete specific rows
+DELETE FROM Track WHERE duration_sec < 10;
+
+-- Delete with a JOIN condition (MySQL syntax)
+DELETE t
+FROM Track AS t
+JOIN  Album AS al ON t.album_id = al.id
+WHERE al.year < 1950;
+
+-- DANGER: DELETE without WHERE empties the entire table!
+DELETE FROM Track;  -- all rows gone, structure remains
+  \end{lstlisting}
 
   \begin{itemize}
-    \item \texttt{DELETE} removes rows but \textbf{keeps the table
-          structure} (schema, indexes, constraints).  To remove the table
-          entirely, use \texttt{DROP TABLE}.
-    \item \texttt{TRUNCATE TABLE employee} is faster than
-          \texttt{DELETE FROM employee} for emptying a table (it
-          deallocates data pages directly), but it cannot be rolled back in
-          some DBMSs and resets \texttt{AUTO\_INCREMENT} counters.
+    \item \texttt{DELETE} removes rows but \textbf{keeps the table structure}.
+    \item Deleted rows \textbf{cannot be recovered} without a backup or transaction rollback.
+    \item Referential integrity: if another table has a \texttt{FOREIGN KEY} pointing to the row
+          being deleted, the delete will fail unless \texttt{ON DELETE CASCADE} or
+          \texttt{ON DELETE SET NULL} is configured.
   \end{itemize}
+\end{frame}
 
-  \begin{alertblock}{Always Include a WHERE Clause}
-    The same warning as for \texttt{UPDATE} applies: test with a
-    \texttt{SELECT} first.  Deleted rows cannot be recovered without a
-    backup.
-  \end{alertblock}
+% ----------------------------------------------------------
+\begin{frame}[fragile]{DELETE vs TRUNCATE vs DROP}
+  \begin{lstlisting}[style=sqlstyle]
+-- DELETE: removes rows one by one, respects FK constraints
+DELETE FROM Track WHERE album_id = 5;
+
+-- TRUNCATE: removes ALL rows instantly, resets AUTO_INCREMENT
+-- Cannot be rolled back in MySQL, ignores FK checks
+TRUNCATE TABLE Track;
+
+-- DROP: removes the entire table (schema + data)
+DROP TABLE Track;
+
+-- Safe version: only drops if the table exists
+DROP TABLE IF EXISTS Track;
+  \end{lstlisting}
+
+  \begin{center}
+  \renewcommand{\arraystretch}{1.2}
+  \begin{tabular}{@{}llll@{}}
+    \toprule
+    & \textbf{DELETE} & \textbf{TRUNCATE} & \textbf{DROP} \\
+    \midrule
+    Removes rows     & Selected rows & All rows & All rows \\
+    Keeps structure  & Yes & Yes & \textbf{No} \\
+    Rollback         & Yes & No (MySQL) & No \\
+    Resets AUTO\_INC & No  & \textbf{Yes} & n/a \\
+    FK constraints   & Checked & Skipped & n/a \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{Transactions -- Keeping Changes Safe}
+  \begin{lstlisting}[style=sqlstyle]
+-- Wrap related changes in a transaction
+START TRANSACTION;
+
+UPDATE Album SET title = 'Renamed' WHERE id = 10;
+DELETE FROM Track WHERE album_id = 10;
+
+-- All changes look good? Make them permanent:
+COMMIT;
+
+-- Something went wrong? Undo everything since START:
+-- ROLLBACK;
+  \end{lstlisting}
+
+  \begin{block}{Why Transactions Matter for DML}
+    \begin{itemize}
+      \item A transaction is \textbf{all-or-nothing} (ACID Atomicity): either all statements succeed
+            and are committed, or none of them are applied.
+      \item \textbf{Always use transactions} for multi-step changes (e.g.\ update + delete that
+            must both succeed, or a bank transfer between two accounts).
+      \item \texttt{ROLLBACK} is the safety net for testing dangerous DML statements.
+    \end{itemize}
+  \end{block}
 \end{frame}

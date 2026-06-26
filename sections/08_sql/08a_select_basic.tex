@@ -1,17 +1,19 @@
 \subsection{Data Manipulation Language}
+
+% ----------------------------------------------------------
 \begin{frame}[fragile]{SELECT -- The Foundation}
   The \texttt{SELECT} statement retrieves data from one or more tables.
   It is the most frequently used SQL statement.
 
   \begin{block}{Full Syntax (clauses in writing order)}
 \begin{lstlisting}[style=sqlstyle]
-SELECT column_name(s)
-FROM table_name
-WHERE condition
-GROUP BY column_name(s)
-HAVING condition
-ORDER BY column_name(s)
-LIMIT number
+SELECT  column_name(s)       -- what to return
+FROM    table_name           -- where to look
+WHERE   condition            -- filter rows
+GROUP BY column_name(s)      -- aggregate into groups
+HAVING  condition            -- filter groups
+ORDER BY column_name(s)      -- sort result
+LIMIT   number               -- max rows to return
 \end{lstlisting}
   \end{block}
 
@@ -23,169 +25,201 @@ LIMIT number
           for groups, not individual rows).
   \end{itemize}
 
-  \begin{alertblock}{Execution Order (not writing order!)}
+  \begin{alertblock}{Execution Order $\neq$ Writing Order}
     \texttt{FROM} $\to$ \texttt{WHERE} $\to$ \texttt{GROUP BY} $\to$
     \texttt{HAVING} $\to$ \texttt{SELECT} $\to$ \texttt{ORDER BY} $\to$
     \texttt{LIMIT}\\[2pt]
-    Understanding this order is essential: it explains, for example, why
-    column aliases defined in \texttt{SELECT} cannot be referenced in
-    \texttt{WHERE}.
+    This is why column aliases from \texttt{SELECT} cannot be used in
+    \texttt{WHERE} -- \texttt{WHERE} runs before \texttt{SELECT}!
   \end{alertblock}
 \end{frame}
 
 % ----------------------------------------------------------
-\begin{frame}[fragile]{SELECT -- Basic Usage}
-  \begin{block}{Examples}
+\begin{frame}[fragile]{SELECT -- Choosing Columns}
+  \begin{block}{Examples using the Music database}
 \begin{lstlisting}[style=sqlstyle]
--- Select all columns from a table
-SELECT * FROM brand;
+-- Return ALL columns (convenient for exploration)
+SELECT * FROM Artist;
 
--- Select specific columns
-SELECT name, address FROM brand;
+-- Return specific columns only
+SELECT Name, Country FROM Artist;
 
--- Qualify column names (needed with multiple tables)
-SELECT brand.name, brand.city FROM brand;
+-- Qualify column names (required when joining tables)
+SELECT Artist.Name, Artist.Country FROM Artist;
 \end{lstlisting}
   \end{block}
 
-  \begin{itemize}
-    \item Using \texttt{*} returns \textbf{all columns} -- convenient for
-          exploration but avoid in production code: column order can change
-          when the table is altered, and transferring unneeded columns wastes
-          network bandwidth and memory.
-    \item Qualifying with \texttt{table.column} notation prevents
-          \textbf{ambiguity} when joining multiple tables that share column
-          names (e.g.\ both have an \texttt{id} column).
-  \end{itemize}
+  \begin{block}{Result of \texttt{SELECT Name, Country FROM Artist}}
+    \begin{tabular}{@{}ll@{}}
+      \toprule
+      \textbf{Name} & \textbf{Country} \\
+      \midrule
+      The Beatles & UK \\
+      Kraftwerk   & Germany \\
+      Daft Punk   & France \\
+      \bottomrule
+    \end{tabular}
+  \end{block}
 
-  \begin{examples}{Tip: Explore first, then be specific}
-    When learning a new schema, start with \texttt{SELECT * FROM table LIMIT
-    10} to understand its structure, then narrow your query to only the
-    columns you actually need.
-  \end{examples}
+  \begin{alertblock}{Avoid \texttt{SELECT *} in production code}
+    Column order can change when the table is altered. Transferring unneeded
+    columns wastes network bandwidth. Always name the columns you need.
+  \end{alertblock}
 \end{frame}
 
 % ----------------------------------------------------------
 \begin{frame}[fragile]{SELECT DISTINCT}
   \begin{block}{Returning Only Unique Values}
 \begin{lstlisting}[style=sqlstyle]
--- Return only unique values
-SELECT DISTINCT country FROM brand;
+-- All genres (with duplicates)
+SELECT Genre FROM Album;
+-- Returns: Rock, Electronic, Electronic
 
--- Multiple columns: the combination must be unique
-SELECT DISTINCT country, legal_form FROM brand;
+-- Unique genres only
+SELECT DISTINCT Genre FROM Album;
+-- Returns: Rock, Electronic
+
+-- DISTINCT on multiple columns -- the COMBINATION must be unique
+SELECT DISTINCT Genre, ReleaseYear FROM Album;
 \end{lstlisting}
   \end{block}
 
   \begin{itemize}
-    \item Without \texttt{DISTINCT}, SQL returns \textbf{all rows including
-          duplicates}.  This differs from pure relational algebra, which
-          always produces sets (no duplicates).
-    \item \texttt{DISTINCT} applies to the \textbf{entire row}, not just one
-          column: in the second example, the pair
-          \texttt{(country, legal\_form)} must be unique.
+    \item Without \texttt{DISTINCT}, SQL returns \textbf{all rows including duplicates}
+    \item \texttt{DISTINCT} applies to the \textbf{entire row}, not just the first column
   \end{itemize}
 
   \begin{alertblock}{Performance Warning}
-    \texttt{DISTINCT} forces the database to sort or hash the entire result
-    set to eliminate duplicates.  On large tables this can be very expensive.
-    Avoid it if your query is already guaranteed to return unique rows, or if
-    you simply want to count (use \texttt{COUNT(DISTINCT column)} instead).
+    \texttt{DISTINCT} forces the database to sort or hash the entire result set.
+    On large tables this is expensive. Avoid it if your query already guarantees
+    unique rows, or use \texttt{COUNT(DISTINCT col)} for counting.
   \end{alertblock}
 \end{frame}
 
 % ----------------------------------------------------------
-\begin{frame}[fragile]{SELECT with LIMIT / TOP}
+\begin{frame}[fragile]{LIMIT and OFFSET -- Pagination}
   \begin{block}{Restricting the Number of Returned Rows}
 \begin{lstlisting}[style=sqlstyle]
--- MySQL / MariaDB / PostgreSQL:
-SELECT * FROM product LIMIT 10;
+-- Return at most 2 albums
+SELECT * FROM Album LIMIT 2;
 
--- Skip first 20 rows, then return the next 10
-SELECT * FROM product LIMIT 10 OFFSET 20;
+-- Skip first 2, then return the next 2 (page 2, 2 rows/page)
+SELECT * FROM Album ORDER BY AlbumID LIMIT 2 OFFSET 2;
 
--- SQL Server syntax:
-SELECT TOP 10 * FROM product;
+-- SQL Server syntax (for reference):
+SELECT TOP 2 * FROM Album;
 \end{lstlisting}
   \end{block}
 
-  \begin{itemize}
-    \item \texttt{LIMIT} is essential when exploring large tables -- without
-          it a query on a table with millions of rows could transfer
-          gigabytes of data.
-    \item \texttt{OFFSET} enables \textbf{pagination}: to show page~3 with
-          10 rows per page, use \texttt{LIMIT 10 OFFSET 20}.
-  \end{itemize}
+  \begin{block}{Result of \texttt{SELECT Title FROM Album LIMIT 2}}
+    \begin{tabular}{@{}l@{}}
+      \toprule
+      \textbf{Title} \\
+      \midrule
+      Abbey Road \\
+      Autobahn \\
+      \bottomrule
+    \end{tabular}
+  \end{block}
 
   \begin{alertblock}{Always combine LIMIT with ORDER BY}
-    Without an explicit \texttt{ORDER BY} the row order is
-    \textbf{undefined} -- the database may return a different set of rows
-    each time.  \texttt{LIMIT} without \texttt{ORDER BY} is only useful for
-    a quick look at the data, never for reproducible results.
+    Without \texttt{ORDER BY}, the database may return a different set of rows
+    each time. \texttt{LIMIT} without \texttt{ORDER BY} is only for quick
+    data exploration.
   \end{alertblock}
 \end{frame}
 
 % ----------------------------------------------------------
-\begin{frame}[fragile]{Aliases (AS)}
-  \begin{block}{Renaming Columns, Tables, and Expressions}
+\begin{frame}[fragile]{Aliases (AS) -- Renaming Output}
+  \begin{block}{Column, Table, and Expression Aliases}
 \begin{lstlisting}[style=sqlstyle]
--- Column alias
-SELECT best_before_date AS bbd FROM stock;
+-- Column alias: rename output column
+SELECT Title AS album_title, ReleaseYear AS year
+FROM Album;
 
--- Table alias (useful in JOINs)
-SELECT p.name, p.price FROM product AS p;
+-- Expression alias: label a computed value
+SELECT Title, Duration / 60.0 AS duration_minutes
+FROM Track;
 
--- Expression alias
-SELECT AVG(price) AS avg_price FROM product;
+-- Table alias: shorter reference (essential for JOINs)
+SELECT a.Name, al.Title
+FROM Artist AS a
+JOIN Album  AS al ON a.ArtistID = al.ArtistID;
 \end{lstlisting}
   \end{block}
 
   \begin{itemize}
-    \item Aliases are \textbf{temporary}: they exist only for the duration
-          of the query and do not change the underlying table.
-    \item Table aliases reduce typing and dramatically improve readability
-          in complex queries with multiple joins.
-    \item Column aliases can be used in \texttt{ORDER BY} (MySQL allows this
-          as an extension) but \textbf{not} in \texttt{WHERE} or
-          \texttt{HAVING} -- because those clauses are evaluated before
-          \texttt{SELECT} assigns the alias.
+    \item Aliases are \textbf{temporary} -- they only exist for the duration of the query
+    \item Column aliases can be used in \texttt{ORDER BY} (MySQL extension)
+    \item Column aliases \textbf{cannot} be used in \texttt{WHERE} or \texttt{HAVING}
+          (those clauses execute before \texttt{SELECT})
   \end{itemize}
-
-  \begin{examples}{Shorthand: AS is optional}
-    Most DBMSs allow omitting the keyword \texttt{AS}:
-    \texttt{SELECT price p FROM product} is equivalent to
-    \texttt{SELECT price AS p FROM product}.
-    Using \texttt{AS} explicitly is recommended for clarity.
-  \end{examples}
 \end{frame}
 
 % ----------------------------------------------------------
-\begin{frame}[fragile]{Aggregate Functions}
-  Aggregate functions perform a calculation on a \textbf{set of rows} and
-  return a \textbf{single value}.  They are the building block of
-  statistical queries.
+\begin{frame}[fragile]{Aggregate Functions -- Overview}
+  Aggregate functions compute a single value from a set of rows.
 
-  \begin{block}{Common Aggregate Functions}
+  \begin{block}{Common Functions -- Music Database Examples}
 \begin{lstlisting}[style=sqlstyle]
-SELECT COUNT(*) FROM product;         -- count all rows
-SELECT COUNT(price) FROM product;     -- count non-NULL values
-SELECT MIN(price) FROM product;
-SELECT MAX(price) FROM product;
-SELECT SUM(price) FROM product;
-SELECT AVG(price) AS average_price FROM product;
+-- Count all rows (including NULLs)
+SELECT COUNT(*) FROM Track;            -- Result: 5
+
+-- Count non-NULL values in a column
+SELECT COUNT(Duration) FROM Track;     -- Result: 5
+
+-- Min / Max / Sum / Average
+SELECT MIN(Duration)  FROM Track;      -- Result: 182
+SELECT MAX(Duration)  FROM Track;      -- Result: 1373
+SELECT SUM(Duration)  FROM Track;      -- Result: 2399
+SELECT AVG(Duration)  FROM Track;      -- Result: 479.8
+SELECT AVG(Duration) / 60.0 AS avg_min FROM Track; -- ~8 min
 \end{lstlisting}
   \end{block}
 
   \begin{itemize}
-    \item \texttt{COUNT(*)} counts \textbf{all rows} (including those with
-          \texttt{NULL}); \texttt{COUNT(column)} counts only rows where
-          the column is \textbf{not} \texttt{NULL}.
-    \item Aggregate functions are most powerful when combined with
-          \texttt{GROUP BY} to compute per-group statistics.
+    \item \texttt{COUNT(*)} counts \textbf{all rows} (including \texttt{NULL});
+          \texttt{COUNT(col)} counts only \textbf{non-NULL} values
+    \item Most powerful when combined with \texttt{GROUP BY}
   \end{itemize}
 
   \begin{alertblock}{Cannot Use Aggregates in WHERE}
-    Aggregate functions are computed \emph{after} \texttt{WHERE} filtering.
+    Aggregates are computed \emph{after} \texttt{WHERE} filtering.
     Use \texttt{HAVING} to filter on aggregate results.
+  \end{alertblock}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{Common Mistakes -- SELECT Basics}
+  \begin{alertblock}{Mistake 1: Using \texttt{= NULL} instead of \texttt{IS NULL}}
+\begin{lstlisting}[style=sqlstyle]
+-- WRONG: always returns 0 rows (NULL = NULL is NULL, not TRUE)
+SELECT * FROM Artist WHERE Country = NULL;
+
+-- CORRECT
+SELECT * FROM Artist WHERE Country IS NULL;
+\end{lstlisting}
+  \end{alertblock}
+
+  \begin{alertblock}{Mistake 2: Referencing alias in WHERE}
+\begin{lstlisting}[style=sqlstyle]
+-- WRONG: 'dur_min' is not yet defined when WHERE runs
+SELECT Duration / 60.0 AS dur_min FROM Track
+WHERE dur_min > 4;
+
+-- CORRECT: repeat the expression
+SELECT Duration / 60.0 AS dur_min FROM Track
+WHERE Duration / 60.0 > 4;
+\end{lstlisting}
+  \end{alertblock}
+
+  \begin{alertblock}{Mistake 3: Forgetting ORDER BY with LIMIT}
+\begin{lstlisting}[style=sqlstyle]
+-- UNRELIABLE: could return any 3 tracks in any order
+SELECT * FROM Track LIMIT 3;
+
+-- CORRECT: deterministic result
+SELECT * FROM Track ORDER BY TrackID LIMIT 3;
+\end{lstlisting}
   \end{alertblock}
 \end{frame}

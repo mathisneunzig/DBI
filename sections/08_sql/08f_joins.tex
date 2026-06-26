@@ -1,315 +1,274 @@
 % ----------------------------------------------------------
+% Running example schema for this section:
+% Artist(id, name, country)
+% Album(id, title, year, genre, artist_id)
+% Track(id, title, duration_sec, album_id)
+% ----------------------------------------------------------
+
 \begin{frame}{Joins -- Overview}
-  SQL \textbf{JOINs} combine rows from two or more tables based on a related column. They are the SQL
-  realisation of the relational-algebra join operators and are essential whenever your data is spread
-  across multiple tables -- which is almost always the case in a properly normalised schema.
+  SQL \textbf{JOINs} combine rows from two or more tables based on a related column.
+  They are the SQL realisation of relational-algebra join operators and are essential
+  whenever data is spread across multiple tables -- which is always the case in a
+  normalised schema.
 
-  \medskip
-  Without JOINs you would have to load every table separately and combine the data in application code,
-  which is slow, error-prone, and defeats the entire purpose of a relational DBMS.
-
-  \medskip
   \begin{block}{Join types covered in this section}
     \begin{itemize}
       \item \textbf{INNER JOIN} -- only matching rows from both sides
       \item \textbf{NATURAL JOIN} -- automatic column-name matching
       \item \textbf{LEFT (OUTER) JOIN} -- all rows from the left table
       \item \textbf{RIGHT (OUTER) JOIN} -- all rows from the right table
-      \item \textbf{Left Anti-Join} (semi-join via NULL trick)
-      \item \textbf{Right Anti-Join} (semi-join via NULL trick)
+      \item \textbf{Left Anti-Join} -- rows in A with no match in B
+      \item \textbf{Right Anti-Join} -- rows in B with no match in A
       \item \textbf{FULL OUTER JOIN} -- all rows from both tables
     \end{itemize}
   \end{block}
 
-  \medskip
-  Think of a Venn diagram with two overlapping circles (A on the left, B on the right). Each join
-  type selects a different shaded region of that diagram.
+  \begin{exampleblock}{Running Example -- Music Schema}
+    \texttt{Artist(id, name, country)} \quad
+    \texttt{Album(id, title, year, artist\_id)} \quad
+    \texttt{Track(id, title, duration\_sec, album\_id)}
+  \end{exampleblock}
 \end{frame}
 
 % ----------------------------------------------------------
 \begin{frame}{Join Types -- Visual Overview}
   \begin{center}
   \renewcommand{\arraystretch}{1.6}
-  \begin{tabular}{@{}lll@{}}
+  \begin{tabular}{@{}llll@{}}
     \toprule
-    \textbf{Join Type} & \textbf{Venn Diagram} & \textbf{Returns} \\
+    \textbf{Join Type}  & \textbf{Venn} & \textbf{Returns} & \textbf{NULLs?} \\
     \midrule
-    INNER JOIN          & \vennjoin{0}{1}{0} & Matching rows only \\
-    LEFT JOIN           & \vennjoin{1}{1}{0} & All A + matched B \\
-    RIGHT JOIN          & \vennjoin{0}{1}{1} & All B + matched A \\
-    Left Anti-Join      & \vennjoin{1}{0}{0} & A rows with no match in B \\
-    Right Anti-Join     & \vennjoin{0}{0}{1} & B rows with no match in A \\
-    FULL OUTER JOIN     & \vennjoin{1}{1}{1} & All rows from both tables \\
+    INNER JOIN       & \vennjoin{0}{1}{0} & Matching rows only           & No \\
+    LEFT JOIN        & \vennjoin{1}{1}{0} & All A + matched B            & B cols \\
+    RIGHT JOIN       & \vennjoin{0}{1}{1} & All B + matched A            & A cols \\
+    Left Anti-Join   & \vennjoin{1}{0}{0} & A rows with no match in B    & B cols \\
+    Right Anti-Join  & \vennjoin{0}{0}{1} & B rows with no match in A    & A cols \\
+    FULL OUTER JOIN  & \vennjoin{1}{1}{1} & All rows from both tables    & Both \\
     \bottomrule
   \end{tabular}
   \end{center}
 
-  \begin{block}{How to read the diagrams}
-    Circle \textbf{A} = left table, circle \textbf{B} = right table.
-    The \textcolor{blue!50}{\textbf{shaded (blue) region}} shows the rows
-    that appear in the result set.
-    The un-shaded region is discarded.
+  \begin{block}{How to read the Venn diagrams}
+    Circle \textbf{A} = left table \quad Circle \textbf{B} = right table.
+    The \textcolor{blue!50}{\textbf{blue shaded region}} shows rows that appear in the result.
+    Unshaded regions are discarded.
   \end{block}
 \end{frame}
 
+% ----------------------------------------------------------
 \begin{frame}[fragile]{INNER JOIN}
+  \begin{center}\vennjoin{0}{1}{0}\end{center}
+
   \begin{lstlisting}[style=sqlstyle]
-SELECT *
-FROM   A
-INNER JOIN B ON A.id = B.id;
+-- All tracks with their album title
+SELECT t.title AS track, al.title AS album
+FROM   Track AS t
+INNER JOIN Album AS al ON t.album_id = al.id;
   \end{lstlisting}
 
   \begin{block}{What it does}
-    Returns \textbf{only the rows where the join condition is satisfied in BOTH tables}. Any row in A
-    that has no matching row in B is silently discarded -- and vice versa.
+    Returns \textbf{only rows where the join condition is satisfied on both sides}.
+    Rows in \texttt{Track} with no matching \texttt{Album} are discarded -- and vice versa.
   \end{block}
 
   \begin{itemize}
-    \item \textbf{Venn diagram}: only the overlapping centre of the two circles is returned.
-    \item \textbf{Default join}: writing \texttt{JOIN} without a qualifier is equivalent to
-          \texttt{INNER JOIN} in all major DBMSs (MySQL, PostgreSQL, SQL Server, Oracle).
-    \item \textbf{Most commonly used join} in everyday SQL development.
-    \item If the join column contains \texttt{NULL} values, those rows are \emph{never} matched --
-          \texttt{NULL = NULL} evaluates to \texttt{UNKNOWN}, not \texttt{TRUE}.
+    \item \texttt{JOIN} without a qualifier is identical to \texttt{INNER JOIN} in all major DBMS.
+    \item \textbf{Most commonly used join} in everyday SQL work.
+    \item \texttt{NULL} join columns are \emph{never} matched -- \texttt{NULL = NULL} evaluates to
+          \texttt{UNKNOWN}, not \texttt{TRUE}.
   \end{itemize}
-
-  \begin{examples}{Use case}
-    Retrieve orders together with customer details:
-    \texttt{orders INNER JOIN customers ON orders.customer\_id = customers.id}\\
-    Only orders that have a valid, existing customer are returned.
-  \end{examples}
 \end{frame}
 
+% ----------------------------------------------------------
 \begin{frame}[fragile]{NATURAL JOIN}
   \begin{lstlisting}[style=sqlstyle]
-SELECT *
-FROM   A
-NATURAL JOIN B;
+-- Automatically joins on all columns sharing the same name
+SELECT * FROM Track NATURAL JOIN Album;
+-- Implicit condition: Track.album_id = Album.album_id
+-- (only works if both tables have exactly "album_id")
   \end{lstlisting}
 
   \begin{block}{What it does}
-    Automatically joins on \textbf{all columns that share the same name} in both tables. No \texttt{ON}
-    condition is written -- the DBMS infers it. If both tables have a column \texttt{id}, the implicit
-    condition is \texttt{A.id = B.id}.
+    Joins on \textbf{all columns sharing the same name} in both tables; no \texttt{ON} clause needed.
+    Duplicate join columns appear only once in the result.
   \end{block}
 
-  \begin{itemize}
-    \item Duplicate joined columns appear \textbf{only once} in the result set (unlike INNER JOIN which
-          would produce two \texttt{id} columns).
-    \item Semantically equivalent to an INNER JOIN with an explicit \texttt{ON} clause naming every
-          shared column.
-  \end{itemize}
-
-  \begin{alertblock}{Danger -- implicit behaviour}
-    If a developer later adds a new column to one of the tables and it happens to share a name with
-    a column in the other table, the join condition changes \emph{silently}. This is a hard-to-find
-    bug. For production code, always prefer an explicit \texttt{INNER JOIN ... ON}.
+  \begin{alertblock}{Danger -- Silent Breakage}
+    If a developer later adds a column whose name accidentally matches a column in the other table,
+    the join condition changes \emph{silently} and queries return wrong results.
+    Always prefer an explicit \texttt{INNER JOIN \ldots ON} in production code.
   \end{alertblock}
 \end{frame}
 
+% ----------------------------------------------------------
 \begin{frame}[fragile]{LEFT (OUTER) JOIN}
+  \begin{center}\vennjoin{1}{1}{0}\end{center}
+
   \begin{lstlisting}[style=sqlstyle]
-SELECT *
-FROM   A
-LEFT JOIN B ON A.id = B.id;
+-- All artists, including those with no albums yet
+SELECT ar.name, al.title AS album
+FROM   Artist AS ar
+LEFT JOIN Album AS al ON ar.id = al.artist_id;
+-- Artists with no albums appear with NULL in "album"
   \end{lstlisting}
 
   \begin{block}{What it does}
-    Returns \textbf{all rows from the LEFT table (A)}, plus the matching rows from B.
-    Where a row in A has no match in B, all columns originating from B are filled with \texttt{NULL}.
+    Returns \textbf{all rows from the left table (Artist)}, plus matching rows from Album.
+    Where no match exists, Album columns are \texttt{NULL}.
   \end{block}
 
   \begin{itemize}
-    \item \textbf{Venn diagram}: the entire left circle plus the intersection.
-    \item The keyword \texttt{OUTER} is optional -- \texttt{LEFT JOIN} and \texttt{LEFT OUTER JOIN}
-          are identical.
-    \item The result always contains \emph{at least} as many rows as table A.
-    \item \textbf{Very commonly used}: whenever you want a complete list from one table and optionally
-          enriched with data from another.
+    \item \texttt{OUTER} keyword is optional: \texttt{LEFT JOIN} = \texttt{LEFT OUTER JOIN}.
+    \item Result always contains at least as many rows as the left table.
+    \item The most frequently used outer join in practice.
   \end{itemize}
-
-  \begin{examples}{Use case}
-    \texttt{customers LEFT JOIN orders ON customers.id = orders.customer\_id}\\
-    Returns \emph{all} customers. Customers without any orders appear with \texttt{NULL} in the
-    order columns -- they are not dropped from the result.
-  \end{examples}
 \end{frame}
 
+% ----------------------------------------------------------
 \begin{frame}[fragile]{RIGHT (OUTER) JOIN}
+  \begin{center}\vennjoin{0}{1}{1}\end{center}
+
   \begin{lstlisting}[style=sqlstyle]
-SELECT *
-FROM   A
-RIGHT JOIN B ON A.id = B.id;
+-- All albums, including those whose artist_id is missing
+SELECT ar.name, al.title AS album
+FROM   Artist AS ar
+RIGHT JOIN Album AS al ON ar.id = al.artist_id;
+-- Albums with no Artist match appear with NULL for ar.name
   \end{lstlisting}
 
   \begin{block}{What it does}
-    Returns \textbf{all rows from the RIGHT table (B)}, plus the matching rows from A.
-    Where a row in B has no match in A, all columns from A are filled with \texttt{NULL}.
+    Returns \textbf{all rows from the right table (Album)}, plus matching Artist rows.
+    Where no match exists, Artist columns are \texttt{NULL}.
   \end{block}
 
   \begin{itemize}
-    \item \textbf{Venn diagram}: the entire right circle plus the intersection.
-    \item The keyword \texttt{OUTER} is optional.
-    \item Every \texttt{RIGHT JOIN} can be rewritten as a \texttt{LEFT JOIN} by simply swapping the
-          table order: \texttt{A RIGHT JOIN B} $\equiv$ \texttt{B LEFT JOIN A}.
-    \item Because of this, \texttt{RIGHT JOIN} is relatively rare -- most developers stick to
-          \texttt{LEFT JOIN} for consistency and readability.
+    \item Every \texttt{RIGHT JOIN} can be rewritten as a \texttt{LEFT JOIN} by swapping table order:
+          \texttt{A RIGHT JOIN B} $\equiv$ \texttt{B LEFT JOIN A}.
+    \item Most developers use only \texttt{LEFT JOIN} for consistency.
   \end{itemize}
-
-  \begin{examples}{Use case}
-    \texttt{orders RIGHT JOIN products ON orders.product\_id = products.id}\\
-    Returns \emph{all} products, even those that have never been ordered. Orders that have no matching
-    product would appear with \texttt{NULL} in the order columns (though referential integrity usually
-    prevents that).
-  \end{examples}
 \end{frame}
 
+% ----------------------------------------------------------
 \begin{frame}[fragile]{Left Anti-Join (NULL Trick)}
+  \begin{center}\vennjoin{1}{0}{0}\end{center}
+
   \begin{lstlisting}[style=sqlstyle]
--- Rows in A that have NO match in B
-SELECT *
-FROM   A
-LEFT JOIN B ON A.id = B.id
-WHERE  B.id IS NULL;
+-- Artists who have released NO albums
+SELECT ar.name
+FROM   Artist AS ar
+LEFT JOIN Album AS al ON ar.id = al.artist_id
+WHERE  al.id IS NULL;
   \end{lstlisting}
 
   \begin{block}{What it does}
-    Returns only the rows from A that have \textbf{no matching row in B} whatsoever.
+    Returns only rows from \texttt{Artist} that have \textbf{no matching row in Album}.
   \end{block}
 
   \begin{itemize}
-    \item The \texttt{LEFT JOIN} first produces all A rows, with \texttt{NULL} in B columns where no
-          match exists.
-    \item The \texttt{WHERE B.id IS NULL} filter then \emph{keeps only those unmatched rows}.
-    \item SQL has no dedicated \texttt{ANTI JOIN} or \texttt{SEMI JOIN} keyword -- this two-step
-          pattern is the standard workaround.
-    \item \textbf{Venn diagram}: only the left crescent of circle A, excluding the intersection.
-    \item Alternative using \texttt{NOT EXISTS} or \texttt{NOT IN} is possible but the NULL-trick
-          LEFT JOIN often performs better.
+    \item The \texttt{LEFT JOIN} produces \texttt{NULL} in Album columns for unmatched artists.
+    \item \texttt{WHERE al.id IS NULL} keeps only those unmatched rows.
+    \item SQL has no \texttt{ANTI JOIN} keyword -- this two-step pattern is the standard idiom.
+    \item Alternative: \texttt{NOT EXISTS (\ldots)} subquery -- equivalent but sometimes slower.
   \end{itemize}
-
-  \begin{examples}{Use case}
-    Find all customers who have \emph{never} placed an order:\\
-    \texttt{customers LEFT JOIN orders ON customers.id = orders.customer\_id WHERE orders.id IS NULL}
-  \end{examples}
 \end{frame}
 
+% ----------------------------------------------------------
 \begin{frame}[fragile]{Right Anti-Join (NULL Trick)}
+  \begin{center}\vennjoin{0}{0}{1}\end{center}
+
   \begin{lstlisting}[style=sqlstyle]
--- Rows in B that have NO match in A
-SELECT *
-FROM   A
-RIGHT JOIN B ON A.id = B.id
-WHERE  A.id IS NULL;
+-- Albums that have no matching artist (orphaned data)
+SELECT al.title
+FROM   Artist AS ar
+RIGHT JOIN Album AS al ON ar.id = al.artist_id
+WHERE  ar.id IS NULL;
   \end{lstlisting}
 
   \begin{block}{What it does}
-    Returns only the rows from B that have \textbf{no matching row in A} whatsoever.
+    Returns only rows from \texttt{Album} that have \textbf{no matching row in Artist}.
   \end{block}
 
   \begin{itemize}
-    \item Mirror image of the left anti-join: the \texttt{RIGHT JOIN} preserves all B rows, and the
-          \texttt{WHERE A.id IS NULL} filter isolates those without a counterpart in A.
-    \item \textbf{Venn diagram}: only the right crescent of circle B, excluding the intersection.
-    \item Can equally be expressed as a \texttt{LEFT JOIN} with the tables swapped:
-          \texttt{B LEFT JOIN A ON B.id = A.id WHERE A.id IS NULL}
+    \item Mirror image of the left anti-join.
+    \item Can also be expressed as a \texttt{LEFT JOIN} with tables swapped:\\
+          \texttt{Album LEFT JOIN Artist ON \ldots WHERE ar.id IS NULL}
+    \item Useful for finding orphaned or inconsistent data.
   \end{itemize}
-
-  \begin{examples}{Use case}
-    Find all departments that currently have no employees assigned:\\
-    \texttt{employees RIGHT JOIN departments ON employees.dept\_id = departments.id WHERE employees.id IS NULL}
-  \end{examples}
 \end{frame}
 
+% ----------------------------------------------------------
 \begin{frame}[fragile]{FULL OUTER JOIN}
+  \begin{center}\vennjoin{1}{1}{1}\end{center}
+
   \begin{lstlisting}[style=sqlstyle]
--- MySQL does not support FULL OUTER JOIN directly.
--- Simulate it with a UNION of LEFT and RIGHT joins:
-SELECT * FROM A LEFT  JOIN B ON A.id = B.id
+-- MySQL: simulate FULL OUTER JOIN with UNION
+SELECT ar.name, al.title
+FROM   Artist AS ar
+LEFT JOIN Album AS al ON ar.id = al.artist_id
 UNION
-SELECT * FROM A RIGHT JOIN B ON A.id = B.id
-WHERE A.id IS NULL;
+SELECT ar.name, al.title
+FROM   Artist AS ar
+RIGHT JOIN Album AS al ON ar.id = al.artist_id
+WHERE  ar.id IS NULL;
   \end{lstlisting}
 
   \begin{block}{What it does}
-    Returns \textbf{all rows from both tables}. Rows that have no match on the other side receive
-    \texttt{NULL} in the columns originating from that side.
+    Returns \textbf{all rows from both tables}. Non-matching rows get \texttt{NULL} on the other side.
   \end{block}
 
   \begin{itemize}
-    \item \textbf{Venn diagram}: both circles entirely -- the left crescent, the intersection, and the
-          right crescent.
-    \item PostgreSQL and SQL Server support \texttt{FULL OUTER JOIN} as a direct keyword.
-          MySQL does not -- the \texttt{UNION} trick above is required.
-    \item The second \texttt{SELECT} uses \texttt{WHERE A.id IS NULL} to add \emph{only} the
-          right-side-only rows, avoiding duplication of the matched centre rows.
+    \item PostgreSQL and SQL Server support \texttt{FULL OUTER JOIN} directly.
+    \item MySQL requires the \texttt{UNION} workaround shown above.
+    \item The \texttt{WHERE ar.id IS NULL} in the second part avoids duplicating matched rows.
   \end{itemize}
-
-  \begin{examples}{Use case}
-    List all products \emph{and} all brands, even where no link exists between them:\\
-    Products without a brand show \texttt{NULL} for brand columns; brands without any product show
-    \texttt{NULL} for product columns.
-  \end{examples}
 \end{frame}
 
+% ----------------------------------------------------------
+\begin{frame}[fragile]{Multi-Table JOIN Example}
+  \textbf{Task:} List every track, its album title, and the artist name -- only for albums
+  released after 2015.
 
-\begin{frame}[fragile]{NATURAL JOIN and INNER JOIN}
-  \begin{block}{Joining Tables}
-\begin{lstlisting}[style=sqlstyle]
--- Natural Join: automatically joins on all columns with the same name
-SELECT * FROM addresses NATURAL JOIN cities;
--- implicitly: ON addresses.zip_code = cities.zip_code
+  \begin{lstlisting}[style=sqlstyle]
+SELECT ar.name   AS artist,
+       al.title  AS album,
+       t.title   AS track,
+       t.duration_sec
+FROM   Track   AS t
+JOIN   Album   AS al ON t.album_id   = al.id
+JOIN   Artist  AS ar ON al.artist_id = ar.id
+WHERE  al.year > 2015
+ORDER BY ar.name, al.title, t.title;
+  \end{lstlisting}
 
--- Inner Join: explicitly specify the join condition
-SELECT *
-FROM employees AS e
-INNER JOIN departments AS d ON e.department_id = d.id;
-\end{lstlisting}
-  \end{block}
-
-  \begin{block}{Comparison}
+  \begin{block}{Key Points}
     \begin{itemize}
-      \item \texttt{NATURAL JOIN} is \textbf{convenient but fragile}: if
-            someone later adds a column to either table whose name happens to
-            match a column in the other table, the join silently changes its
-            behaviour.
-      \item \texttt{INNER JOIN \ldots ON} makes the join condition
-            \textbf{explicit and stable} -- always preferred in production
-            code.
-      \item An inner join returns only rows where the join condition is
-            \texttt{TRUE} on \textbf{both} sides; rows that do not match
-            are discarded.
+      \item Chain multiple \texttt{JOIN}s one after the other -- each \texttt{ON} clause specifies
+            that particular join's condition independently.
+      \item Use table aliases (\texttt{AS ar}) to keep long queries readable.
+      \item \texttt{WHERE} filters apply \emph{after} all joins are evaluated.
     \end{itemize}
   \end{block}
 \end{frame}
 
 % ----------------------------------------------------------
-\begin{frame}[fragile]{LEFT and RIGHT JOIN}
-  \begin{block}{Outer Joins -- Keeping Unmatched Rows}
-\begin{lstlisting}[style=sqlstyle]
--- Left Join: all rows from employees, matching rows from departments
-SELECT e.name, d.name AS dept_name
-FROM employees AS e
-LEFT JOIN departments AS d ON e.department_id = d.id;
--- Employees without a department get NULL for dept_name
+\begin{frame}{JOIN Comparison Table}
+  \renewcommand{\arraystretch}{1.25}
+  \begin{tabularx}{\linewidth}{@{}lXX@{}}
+    \toprule
+    \textbf{Join Type}  & \textbf{Includes unmatched left rows?} & \textbf{Includes unmatched right rows?} \\
+    \midrule
+    INNER JOIN       & No  & No \\
+    LEFT JOIN        & \textbf{Yes} (NULL right cols) & No \\
+    RIGHT JOIN       & No  & \textbf{Yes} (NULL left cols) \\
+    Left Anti-Join   & Only unmatched left rows & No \\
+    Right Anti-Join  & No  & Only unmatched right rows \\
+    FULL OUTER JOIN  & \textbf{Yes} & \textbf{Yes} \\
+    CROSS JOIN       & n/a -- produces full Cartesian product & n/a \\
+    \bottomrule
+  \end{tabularx}
 
--- Right Join: all rows from departments, matching from employees
-SELECT e.name, d.name AS dept_name
-FROM employees AS e
-RIGHT JOIN departments AS d ON e.department_id = d.id;
--- Departments with no employees still appear (NULL for e.name)
-\end{lstlisting}
-  \end{block}
-
-  \begin{itemize}
-    \item \texttt{LEFT JOIN} is by far the most commonly used outer join
-          -- ``give me everything from the left table, fill in NULLs where
-          there is no match on the right''.
-    \item A \texttt{RIGHT JOIN} can always be rewritten as a \texttt{LEFT
-          JOIN} by swapping the table order; most developers stick to
-          \texttt{LEFT JOIN} for consistency.
-    \item To find \textbf{unmatched} rows (e.g.\ employees with no
-          department), add \texttt{WHERE d.id IS NULL} after the
-          \texttt{LEFT JOIN}.
-  \end{itemize}
+  \begin{alertblock}{NULL and JOINs}
+    A column containing \texttt{NULL} on the join key can \emph{never} match any row -- not even
+    another \texttt{NULL}. Use \texttt{IS NULL} / \texttt{IS NOT NULL} to handle these cases explicitly.
+  \end{alertblock}
 \end{frame}

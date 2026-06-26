@@ -1,25 +1,68 @@
 % ------------------------------------------------------------
-\begin{frame}
-  \frametitle{MySQL Workbench}
-
+\begin{frame}{MySQL Workbench -- Overview}
   \begin{block}{What Is MySQL Workbench?}
-    \textbf{MySQL Workbench} is the official, free GUI tool from Oracle for MySQL databases.\\
+    \textbf{MySQL Workbench} is the official, free GUI tool from Oracle for MySQL.\\
     Download: \texttt{dev.mysql.com/downloads/workbench/}\\[0.3em]
-    It combines a SQL editor, visual schema designer, and server administration panel in one application.
+    It combines a SQL editor, visual schema designer, and server administration
+    panel in one application.
   \end{block}
 
   \begin{block}{Key Features}
     \begin{itemize}
       \item \textbf{Visual schema design}: drag-and-drop ERM / schema diagrams
       \item \textbf{SQL editor}: auto-completion, syntax highlighting, query history
-      \item \textbf{Server administration}: user management, performance monitoring, log viewer
-      \item \textbf{Data migration wizard}: migrate data from other DBMS platforms
-      \item \textbf{Forward engineering}: generate \texttt{CREATE} SQL scripts directly from your ERM diagram
-      \item \textbf{Reverse engineering}: auto-generate an ERM diagram from an existing live database
+      \item \textbf{Server administration}: user management, performance monitoring
+      \item \textbf{Forward engineering}: generate \texttt{CREATE} SQL scripts from ERM
+      \item \textbf{Reverse engineering}: auto-generate ERM from an existing database
+      \item \textbf{Data migration wizard}: migrate from other DBMS platforms
     \end{itemize}
   \end{block}
 
   \begin{examples}{In This Course}
-    MySQL Workbench is used for \textbf{designing and documenting database schemas}. The forward-engineering workflow -- draw the ERM, then generate the DDL -- mirrors real-world database development practice.
+    MySQL Workbench is used for \textbf{designing database schemas}. The
+    forward-engineering workflow -- draw the ERM, then generate the DDL --
+    mirrors real-world database development practice.
   \end{examples}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{MySQL Workbench -- Forward Engineering Workflow}
+  \begin{block}{From ERM Diagram to Running Database}
+    \begin{enumerate}
+      \item Design your schema visually: create tables, set data types, draw relationships
+      \item Review the auto-generated \texttt{CREATE TABLE} scripts
+      \item Click \textbf{Database $\to$ Forward Engineer} to push the schema to MySQL
+      \item The DBMS creates all tables and constraints automatically
+    \end{enumerate}
+  \end{block}
+
+  \begin{block}{Reverse Engineering -- the other direction}
+    \begin{enumerate}
+      \item Click \textbf{Database $\to$ Reverse Engineer}
+      \item Connect to an existing MySQL database
+      \item Workbench automatically generates the ERM diagram from live schema
+    \end{enumerate}
+    Useful for documenting or understanding an undocumented legacy database.
+  \end{block}
+
+  \begin{alertblock}{MySQL Only}
+    MySQL Workbench only connects to MySQL and MariaDB. For PostgreSQL, Oracle,
+    or other databases, use \textbf{DBeaver} instead.
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{\textbf{[GRAPHIC PLACEHOLDER]} MySQL Workbench Schema Designer}
+  \begin{alertblock}{INSERT SCREENSHOT HERE}
+    Screenshot of MySQL Workbench ERM diagram view showing several tables
+    (e.g.\ Artist, Album, Track) with relationship lines connecting them.
+  \end{alertblock}
+
+  \begin{block}{What to observe}
+    \begin{itemize}
+      \item Tables shown as boxes with column names and types
+      \item Relationship lines with crow's-foot notation (1:N, M:N)
+      \item Toolbar for adding tables, views, and procedures
+    \end{itemize}
+  \end{block}
 \end{frame}

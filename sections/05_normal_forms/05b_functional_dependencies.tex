@@ -1,63 +1,133 @@
 % ---------------------------------------------------------------------------
-\begin{frame}{Functional Dependencies}
+\begin{frame}{What is a Functional Dependency?}
   \begin{block}{Definition}
-    A \textbf{functional dependency (FD)} $A \to B$ holds in a relation if,
-    whenever two tuples agree on the value(s) of $A$, they must also agree on
-    the value(s) of $B$.  We say ``$A$ \emph{functionally determines} $B$''.
+    A \textbf{functional dependency (FD)} $A \to B$ holds in a relation $R$ if:
+    \[
+      \forall\, t_1, t_2 \in R:\quad t_1[A] = t_2[A] \;\Rightarrow\; t_1[B] = t_2[B]
+    \]
+    Whenever two tuples agree on $A$, they \emph{must} agree on $B$.\\
+    We say: \textbf{``$A$ functionally determines $B$''}.
   \end{block}
 
   \begin{columns}[t]
-    \begin{column}{0.48\textwidth}
+    \begin{column}{0.5\textwidth}
       \textbf{Notation}
       \begin{itemize}
-        \item $A \to B$ --- ``A determines B''\\
-              Knowing $A$'s value fixes $B$'s value exactly.
-        \item $AB \to C$ --- ``A and B together determine C''\\
-              Both attributes on the left are required.
-        \item $A \twoheadrightarrow B$ --- ``A multi-determines B''\\
-              $A$ determines a \emph{set} of $B$ values (multivalued dependency,
-              covered in 4NF).
+        \item $A \to B$ \quad --- ``$A$ determines $B$''
+        \item $AB \to C$ \quad --- both $A$ and $B$ together determine $C$
+        \item $A \twoheadrightarrow B$ \quad --- multivalued dependency (4NF)
       \end{itemize}
     \end{column}
-    \begin{column}{0.48\textwidth}
-      \textbf{Examples}
-      \begin{itemize}
-        \item $\texttt{StudentID} \to \texttt{StudentName}$\\
-              Each student ID maps to exactly one name.
-        \item $\texttt{CourseID} \to \texttt{CourseName}$\\
-              Each course ID maps to exactly one name.
-        \item $\texttt{AlbumID} \to \texttt{Title, MainArtist, Genre, Release}$\\
-              The album ID determines all other album-level attributes.
-        \item $\texttt{AlbumID, Song} \to \texttt{FeaturedArtist}$\\
-              The combination of album and song determines the featured artist.
-      \end{itemize}
+    \begin{column}{0.45\textwidth}
+      \textbf{Key Insight}\\
+      FDs describe \emph{semantic} constraints of the real world.
+      They are determined by the \textbf{meaning} of the data, not by one
+      particular snapshot of values.
     \end{column}
   \end{columns}
 \end{frame}
 
 % ---------------------------------------------------------------------------
-\begin{frame}{Types of Functional Dependencies}
-  Understanding the \emph{type} of an FD is essential for knowing which normal
-  form it violates and how to fix it.
+\begin{frame}{Functional Dependencies --- Examples from the Music Domain}
+  Using our running example: an online music catalogue.
 
-  \begin{itemize}
-    \item \textbf{Trivial FD:} The dependent is a subset of the determinant.
-          Example: $AB \to B$.  Always true by definition; carries no
-          information about the data.
-    \item \textbf{Non-trivial FD:} The dependent is \emph{not} part of the
-          determinant.  Example: $A \to B$ where $B \notin A$.  These are the
-          interesting dependencies to analyse.
-    \item \textbf{Fully Functional FD:} $AB \to C$ holds, and \emph{neither}
-          $A \to C$ nor $B \to C$ alone holds.  Both $A$ and $B$ are
-          genuinely needed.
-    \item \textbf{Partial FD:} $AB \to C$ holds, but also $A \to C$ alone
-          holds.  $B$ is redundant in the determinant.  Partial FDs are the
-          target of 2NF.
-    \item \textbf{Transitive FD:} $A \to B$ and $B \to C$ implies
-          $A \to C$ transitively.  The attribute $C$ does not depend
-          \emph{directly} on $A$.  Transitive FDs are the target of 3NF.
-    \item \textbf{Multivalued FD:} $A \twoheadrightarrow B$ --- knowing $A$
-          determines an entire \emph{set} of $B$ values, independently of other
-          attributes.  Multivalued FDs are the target of 4NF.
-  \end{itemize}
+  \vspace{6pt}
+  \begin{center}
+    \small
+    \begin{tabular}{ll}
+      \toprule
+      \textbf{Functional Dependency} & \textbf{Reading} \\
+      \midrule
+      $\texttt{ArtistID} \to \texttt{Name, Country, DebutYear}$ & Each artist ID has exactly one name/country/debut \\
+      $\texttt{AlbumID} \to \texttt{Title, ArtistID, Genre, ReleaseYear}$ & Album ID determines all album-level attributes \\
+      $\texttt{AlbumID, TrackNumber} \to \texttt{Title, Duration}$ & Track is uniquely identified by album + track no. \\
+      \bottomrule
+    \end{tabular}
+  \end{center}
+
+  \vspace{6pt}
+  \begin{examples}{Concrete Data}
+    \scriptsize
+    \begin{tabular}{llll}
+      \toprule
+      \textbf{AlbumID} & \textbf{TrackNumber} & \textbf{Title} & \textbf{ArtistID} \\
+      \midrule
+      A100 & 1 & Anti-Hero     & ART1 \\
+      A100 & 2 & Karma         & ART1 \\
+      A101 & 1 & As It Was     & ART2 \\
+      \bottomrule
+    \end{tabular}\\[4pt]
+    \normalsize
+    $\texttt{AlbumID} \to \texttt{ArtistID}$ holds: both A100 rows give ART1.
+  \end{examples}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{Types of FDs: Trivial, Partial, Transitive}
+  \begin{block}{Trivial FD}
+    $AB \to B$ --- the dependent is a \emph{subset} of the determinant.
+    Always true by definition; carries no useful information; can be ignored in
+    analysis.
+  \end{block}
+
+  \begin{block}{Partial FD --- Target of 2NF}
+    $AB \to C$ holds, but also $A \to C$ alone holds.
+    $B$ is \textbf{redundant} in the determinant.\\[2pt]
+    \textit{Example:} Key is \texttt{(AlbumID, TrackNumber)}, but
+    $\texttt{AlbumID} \to \texttt{Genre}$ holds alone.\\
+    Genre depends only on the album, not the track --- \textbf{partial dependency}.
+  \end{block}
+
+  \begin{block}{Transitive FD --- Target of 3NF}
+    $A \to B$ and $B \to C$ (with $B$ non-prime) implies $A \to C$
+    \emph{indirectly}.\\[2pt]
+    \textit{Example:}
+    $\texttt{AlbumID} \to \texttt{ArtistID} \to \texttt{DebutYear}$\\
+    Debut year depends on the artist, not directly on the album.
+  \end{block}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{Types of FDs: Full and Multivalued}
+  \begin{block}{Fully Functional FD}
+    $AB \to C$ holds, and \emph{neither} $A \to C$ nor $B \to C$ alone holds.
+    Both attributes in the determinant are genuinely required.\\[2pt]
+    \textit{Example:} $\texttt{AlbumID, TrackNumber} \to \texttt{Title}$\\
+    Neither the album ID alone nor the track number alone uniquely identifies a
+    track title.
+  \end{block}
+
+  \begin{block}{Multivalued FD --- Target of 4NF}
+    $A \twoheadrightarrow B$ --- knowing $A$ determines an entire \emph{set} of
+    $B$ values, independently of other attributes.\\[2pt]
+    \textit{Example:} A musician can have multiple instruments AND multiple
+    languages spoken.  These are \textbf{independent} multi-valued facts.
+  \end{block}
+
+  \begin{alertblock}{Summary: Which NF Eliminates Which Dependency Type?}
+    \small
+    \begin{tabular}{ll}
+      \textbf{2NF}  & Eliminates partial FDs \\
+      \textbf{3NF}  & Eliminates transitive FDs \\
+      \textbf{BCNF} & Every determinant must be a superkey \\
+      \textbf{4NF}  & Eliminates multivalued FDs \\
+    \end{tabular}
+  \end{alertblock}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{[GRAPHIC PLACEHOLDER] FD Diagram for the Music Example}
+  \begin{alertblock}{INSERT GRAPHIC HERE}
+    Add a functional dependency diagram (attribute graph) showing:
+    \begin{itemize}
+      \item \texttt{AlbumID} $\to$ \texttt{Title}, \texttt{Genre},
+            \texttt{ReleaseYear}, \texttt{ArtistID}
+      \item \texttt{ArtistID} $\to$ \texttt{Name}, \texttt{DebutYear}
+      \item \texttt{(AlbumID, TrackNumber)} $\to$ \texttt{Title}, \texttt{Duration}
+      \item Dashed arrow from \texttt{AlbumID} through \texttt{ArtistID} to
+            \texttt{DebutYear} showing the transitive chain
+    \end{itemize}
+    Suggested tool: TikZ (attribute nodes as rounded rectangles, solid arrows for
+    direct FDs, dashed arrow for the transitive dependency)
+  \end{alertblock}
 \end{frame}

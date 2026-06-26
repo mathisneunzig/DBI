@@ -1,71 +1,137 @@
 % ---------------------------------------------------------------------------
-\begin{frame}{Armstrong Axioms}
-  Named after William W.\ Armstrong (1974).  These inference rules allow us to
-  \emph{derive} all functional dependencies that logically follow from a given
-  set $F$.
+\begin{frame}{Armstrong Axioms --- Deriving New FDs}
+  Named after William W.\ Armstrong (1974).  These inference rules let us
+  \textbf{derive} every FD that logically follows from a given set $F$.
 
   \begin{columns}[t]
     \begin{column}{0.48\textwidth}
-      \textbf{Original Three Axioms}
+      \textbf{The Three Base Axioms}
       \begin{enumerate}
         \item \textbf{Reflexivity:}\\
               If $B \subseteq A$, then $A \to B$.\\
-              A set always determines its own subsets.
+              \textit{A set determines its own subsets.}
         \item \textbf{Augmentation:}\\
               If $A \to B$, then $AC \to BC$.\\
-              Adding the same attribute(s) to both sides preserves the FD.
+              \textit{Adding attributes to both sides preserves the FD.}
         \item \textbf{Transitivity:}\\
               If $A \to B$ and $B \to C$, then $A \to C$.
       \end{enumerate}
     \end{column}
     \begin{column}{0.48\textwidth}
-      \textbf{Derived Rules}
+      \textbf{Derived Rules (shortcuts)}
       \begin{enumerate}
         \setcounter{enumi}{3}
         \item \textbf{Union:}\\
-              If $A \to B$ and $A \to C$, then $A \to BC$.
+              $A \to B,\; A \to C \;\Rightarrow\; A \to BC$
         \item \textbf{Decomposition:}\\
-              If $A \to BC$, then $A \to B$ and $A \to C$.
+              $A \to BC \;\Rightarrow\; A \to B$ and $A \to C$
         \item \textbf{Pseudotransitivity:}\\
-              If $A \to B$ and $CB \to D$, then $CA \to D$.
+              $A \to B,\; CB \to D \;\Rightarrow\; CA \to D$
       \end{enumerate}
     \end{column}
   \end{columns}
 
-  \vspace{8pt}
+  \vspace{0.5em}
   \begin{alertblock}{Completeness and Soundness}
     The Armstrong axioms are both \textbf{complete} (every FD that holds can be
-    derived) and \textbf{sound} (every derived FD actually holds).  They form
+    derived) and \textbf{sound} (every derived FD actually holds). They form
     the foundation for all normalisation algorithms.
   \end{alertblock}
 \end{frame}
 
 % ---------------------------------------------------------------------------
-\begin{frame}{Keys Revisited}
-  Before studying normal forms in detail, we need precise definitions of
-  \emph{keys}.
-
+\begin{frame}{Armstrong Axioms --- Applied to the Music Example}
+  Given the following FDs for our music catalogue:
   \begin{itemize}
-    \item \textbf{Superkey:} A set $A \subseteq R$ such that $A \to R$
-          (i.e.\ $A$ determines \emph{all} attributes of $R$).  May contain
-          redundant attributes.
+    \item $\texttt{AlbumID} \to \texttt{ArtistID}$
+    \item $\texttt{ArtistID} \to \texttt{DebutYear}$
+    \item $\texttt{AlbumID} \to \texttt{Genre}$
+    \item $\texttt{AlbumID} \to \texttt{ReleaseYear}$
+  \end{itemize}
+
+  \vspace{6pt}
+  \begin{examples}{Deriving Further FDs}
+    \begin{tabular}{lll}
+      \toprule
+      \textbf{Derived FD} & \textbf{Rule Used} & \textbf{From} \\
+      \midrule
+      $\texttt{AlbumID} \to \texttt{DebutYear}$ & Transitivity & FD 1 + FD 2 \\
+      $\texttt{AlbumID} \to \texttt{Genre, ReleaseYear}$ & Union & FD 3 + FD 4 \\
+      $\texttt{AlbumID} \to \texttt{ArtistID, Genre}$ & Union & FD 1 + FD 3 \\
+      $\texttt{AlbumID, TrackNo} \to \texttt{ArtistID}$ & Augmentation & FD 1 \\
+      \bottomrule
+    \end{tabular}
+  \end{examples}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{Attribute Closure $A^+$}
+  \begin{block}{Definition}
+    The \textbf{closure} of a set of attributes $A$ under FDs $F$, written
+    $A^+$, is the set of \emph{all attributes} that $A$ functionally determines
+    (directly or transitively).
+  \end{block}
+
+  \begin{block}{Algorithm: Compute $A^+$}
+    \begin{enumerate}
+      \item Start: $A^+ := A$
+      \item Repeat until no change:\\
+            for each FD $X \to Y$ in $F$: if $X \subseteq A^+$, add $Y$ to $A^+$
+    \end{enumerate}
+    If $A^+ = R$, then $A$ is a \textbf{superkey}.
+  \end{block}
+
+  \begin{examples}{Example}
+    $R = \{A,B,C,D,E\}$, \quad $F = \{A \to BC,\; B \to D,\; D \to E\}$
+
+    Compute $\{A\}^+$:
+    \begin{tabular}{ll}
+      Start: & $\{A\}$ \\
+      $A \to BC$: & $\{A,B,C\}$ \\
+      $B \to D$: & $\{A,B,C,D\}$ \\
+      $D \to E$: & $\{A,B,C,D,E\} = R$ \\
+    \end{tabular}
+
+    $\{A\}^+ = R \;\Rightarrow$ \textbf{A is a superkey!}
+  \end{examples}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{Keys --- Formal Definitions}
+  \begin{itemize}
+    \item \textbf{Superkey:} A set $A \subseteq R$ such that $A^+ = R$.
+          May contain redundant attributes.
     \item \textbf{Candidate Key:} A \emph{minimal} superkey --- removing any
           single attribute makes it no longer a superkey.
-          \begin{itemize}
-            \item Every candidate key is a superkey, but not vice versa.
-            \item $A$ is a candidate key if $A \to R$ and no proper subset of
-                  $A$ also determines $R$.
-          \end{itemize}
-    \item \textbf{Primary Key:} The candidate key chosen by the database
-          designer as the principal identifier.
-    \item \textbf{Prime Attribute:} An attribute that is part of \emph{at
-          least one} candidate key.
-    \item \textbf{Non-Prime Attribute:} An attribute that is \emph{not} part of
-          any candidate key.  Non-prime attributes are the focus of most
-          normalisation rules.
+    \item \textbf{Primary Key:} The candidate key chosen as the principal identifier.
+    \item \textbf{Prime Attribute:} An attribute that is part of \emph{at least one} candidate key.
+    \item \textbf{Non-Prime Attribute:} An attribute \emph{not} part of any candidate key.
+          These are the focus of most normalisation rules.
   \end{itemize}
 
   \begin{block}{Hierarchy}
-    \[ \text{Superkeys} \supset \text{Candidate Keys} \supset \text{Primary Key (exactly one)} \]
+    \[ \text{Superkeys} \;\supset\; \text{Candidate Keys} \;\supset\; \{\text{Primary Key}\} \]
   \end{block}
+
+  \begin{alertblock}{How to Find All Candidate Keys}
+    For each subset $A$ of $R$: if $A^+ = R$ and no proper subset of $A$ has
+    the same property, then $A$ is a candidate key.
+    Start with single attributes, then pairs, triples, \ldots
+  \end{alertblock}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{Exercise: Closure and Candidate Keys}
+  \begin{block}{Task}
+    Given $R = \{A, B, C, D\}$ and $F = \{A \to B,\; B \to C,\; CD \to A\}$:
+    \begin{enumerate}
+      \item Compute $\{A\}^+$, $\{B\}^+$, $\{D\}^+$, $\{AD\}^+$, $\{BD\}^+$, $\{CD\}^+$
+      \item Identify all candidate keys of $R$
+      \item Which attributes are prime? Which are non-prime?
+    \end{enumerate}
+  \end{block}
+
+  \begin{alertblock}{Time: 10 minutes}
+    Then we discuss the solutions together.
+  \end{alertblock}
 \end{frame}

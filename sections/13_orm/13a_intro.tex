@@ -1,31 +1,78 @@
 \section{Object-Relational Mapping}
 
-\begin{frame}{Object-Relational Mapping (ORM)}
+% ----------------------------------------------------------
+\begin{frame}{Object-Relational Mapping (ORM) -- Introduction}
   \begin{block}{Definition}
     An \textbf{ORM (Object-Relational Mapper)} is a software library that automatically translates
-    between the relational database world (tables, rows, columns) and the object-oriented
-    programming world (classes, instances, fields), allowing developers to work with database data
-    using the idioms of their programming language rather than writing raw SQL.
+    between the relational database world (tables, rows, columns) and the object-oriented programming
+    world (classes, instances, fields), allowing developers to work with database data using their
+    programming language's idioms rather than writing raw SQL.
   \end{block}
 
-  \medskip
-  \textbf{Conceptual mapping:}
-
+  \begin{center}
+  \renewcommand{\arraystretch}{1.25}
   \begin{tabular}{@{}ll@{}}
     \toprule
-    \textbf{Relational Database Concept} & \textbf{Object-Oriented Equivalent (Java)} \\
+    \textbf{Relational Database} & \textbf{Object-Oriented (Java)} \\
     \midrule
     Relation (Table)      & Class \\
     Tuple (Row)           & Instance (object) of the class \\
-    Attribute (Column)    & Field / property of the class \\
-    Primary Key           & \texttt{id} field (often auto-generated) \\
-    Foreign Key           & Reference (object pointer) to another class instance \\
-    Stored Procedure      & Method on the class or repository \\
+    Attribute (Column)    & Field / property \\
+    Primary Key           & \texttt{id} field (auto-generated) \\
+    Foreign Key           & Object reference to another class instance \\
+    JOIN query            & Navigating an object reference (\texttt{obj.getX()}) \\
+    Stored Procedure      & Method on repository or service class \\
     \bottomrule
   \end{tabular}
+  \end{center}
 
-  \medskip
-  Popular ORM frameworks: \textbf{Hibernate} and \textbf{JPA} (Java), \textbf{SQLAlchemy} (Python),
-  \textbf{ActiveRecord} (Ruby on Rails), \textbf{Eloquent} (PHP / Laravel),
-  \textbf{Entity Framework} (.NET).
+  \begin{exampleblock}{Popular ORM Frameworks}
+    \textbf{Hibernate / JPA} (Java) \quad \textbf{SQLAlchemy} (Python) \quad
+    \textbf{ActiveRecord} (Ruby) \quad \textbf{Eloquent} (PHP) \quad
+    \textbf{Entity Framework} (.NET)
+  \end{exampleblock}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{The Object-Relational Impedance Mismatch}
+  Relational databases and object-oriented languages represent data very differently.
+  This fundamental tension is called the \textbf{object-relational impedance mismatch}.
+
+  \begin{columns}[T]
+    \column{0.48\linewidth}
+      \textbf{Relational Model}
+      \begin{itemize}
+        \item Data in flat tables with rows
+        \item Relationships via foreign keys / JOINs
+        \item No identity concept (rows have no memory address)
+        \item Set-based operations
+        \item No inheritance
+      \end{itemize}
+
+    \column{0.48\linewidth}
+      \textbf{Object-Oriented Model}
+      \begin{itemize}
+        \item Data in nested object graphs
+        \item Relationships via object references
+        \item Identity via heap address / \texttt{==}
+        \item Object-at-a-time operations
+        \item Inheritance, polymorphism
+      \end{itemize}
+  \end{columns}
+
+  \vspace{6pt}
+  \begin{alertblock}{The Mismatch in Practice}
+    An \texttt{Artist} object may contain a \texttt{List<Album>}, each \texttt{Album} a
+    \texttt{List<Track>}. In the DB these are three separate tables. The ORM must bridge this
+    gap automatically -- and this is where most ORM complexity (and bugs) originates.
+  \end{alertblock}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{[GRAPHIC PLACEHOLDER] Impedance Mismatch Diagram}
+  \begin{alertblock}{INSERT GRAPHIC HERE}
+    Add a diagram showing: left side = Java object graph (Artist \textrightarrow{} List<Album>
+    \textrightarrow{} List<Track>); right side = three relational tables with FK arrows;
+    middle = ORM bridging the two worlds.
+  \end{alertblock}
 \end{frame}

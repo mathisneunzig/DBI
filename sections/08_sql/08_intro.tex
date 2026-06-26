@@ -1,45 +1,113 @@
 % ============================================================
-%  Section 8 – SQL: Structured Query Language
+%  Section 8 -- SQL: Structured Query Language
 % ============================================================
 
 \section{Structured Query Language}
 
 % ----------------------------------------------------------
 \begin{frame}{What is SQL?}
-  \textbf{SQL} stands for \emph{Structured Query Language}.  Its original
-  name was \emph{SEQUEL} (Structured English Query Language), developed in
-  \textbf{1974 by IBM Research} (Donald Chamberlin and Raymond Boyce) as a
-  language for interacting with their System~R relational prototype.
+  \textbf{SQL} stands for \emph{Structured Query Language}. Originally called
+  \emph{SEQUEL}, it was developed in \textbf{1974 at IBM Research} by Donald
+  Chamberlin and Raymond Boyce for the System~R relational prototype.
 
-  \begin{block}{Standardisation History}
-    \begin{itemize}
-      \item \textbf{SQL-86} -- first ANSI/ISO standard
-      \item \textbf{SQL-92} -- major expansion; still the baseline for most
-            textbooks
-      \item \textbf{SQL:1999} -- added recursion, triggers, object extensions
-      \item \textbf{SQL:2003} -- window functions, XML support
-      \item \textbf{SQL:2016} -- JSON support, row pattern matching
-    \end{itemize}
-    Most relational DBMSs (MySQL, PostgreSQL, Oracle, SQL Server) implement
-    the core standard but each adds its own \textbf{dialect} -- small
-    differences in syntax, functions, and extensions.
+  \begin{block}{Three Sub-Languages}
+    \begin{tabular}{@{}lll@{}}
+      \toprule
+      \textbf{Sub-language} & \textbf{Statements} & \textbf{Purpose} \\
+      \midrule
+      \textbf{DML} -- Data Manipulation & \texttt{SELECT, INSERT, UPDATE, DELETE} & Work with data \\
+      \textbf{DDL} -- Data Definition   & \texttt{CREATE, ALTER, DROP}            & Define schema \\
+      \textbf{DCL} -- Data Control      & \texttt{GRANT, REVOKE}                  & Manage access \\
+      \bottomrule
+    \end{tabular}
   \end{block}
 
   \begin{alertblock}{Case Sensitivity}
-    SQL keywords (\texttt{SELECT}, \texttt{FROM}, \ldots) are
-    \textbf{not} case-sensitive.  String \emph{values} however \textbf{are}
-    case-sensitive: \texttt{'Hamburg'} $\neq$ \texttt{'hamburg'}.
+    SQL \textbf{keywords} (\texttt{SELECT}, \texttt{FROM}, \ldots) are NOT case-sensitive.
+    String \emph{values} ARE case-sensitive: \texttt{'Hamburg'} $\neq$ \texttt{'hamburg'}.
   \end{alertblock}
+\end{frame}
 
-  \begin{block}{Three Sublanguages}
+% ----------------------------------------------------------
+\begin{frame}{SQL Standardisation History}
+  \begin{block}{Key Standards}
+    \begin{tabular}{@{}ll@{}}
+      \toprule
+      \textbf{Standard} & \textbf{Key additions} \\
+      \midrule
+      \textbf{SQL-86}   & First ANSI/ISO standard \\
+      \textbf{SQL-92}   & Major expansion; baseline for most textbooks \\
+      \textbf{SQL:1999} & Recursion, triggers, object extensions \\
+      \textbf{SQL:2003} & Window functions, XML support \\
+      \textbf{SQL:2016} & JSON support, row pattern matching \\
+      \bottomrule
+    \end{tabular}
+  \end{block}
+
+  \begin{block}{Dialects}
+    Every RDBMS implements the core standard but adds its own extensions:
     \begin{itemize}
-      \item \textbf{DML} (Data Manipulation Language):
-            \texttt{SELECT}, \texttt{INSERT}, \texttt{UPDATE},
-            \texttt{DELETE}
-      \item \textbf{DDL} (Data Definition Language):
-            \texttt{CREATE}, \texttt{ALTER}, \texttt{DROP}
-      \item \textbf{DCL} (Data Control Language):
-            \texttt{GRANT}, \texttt{REVOKE}
+      \item \textbf{MySQL/MariaDB}: \texttt{LIMIT}, \texttt{AUTO\_INCREMENT}
+      \item \textbf{PostgreSQL}: rich window functions, arrays, JSON operators
+      \item \textbf{Oracle}: \texttt{ROWNUM}, \texttt{CONNECT BY} (hierarchies)
+      \item \textbf{SQL Server}: \texttt{TOP}, T-SQL procedural extensions
     \end{itemize}
+    This course uses \textbf{MySQL 8.x} syntax throughout.
+  \end{block}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{The Example Database -- Music Schema}
+  All SQL examples in this section use the following schema:
+
+  \begin{block}{Tables}
+\begin{lstlisting}[style=sqlstyle]
+CREATE TABLE Artist (
+    ArtistID   INT PRIMARY KEY AUTO_INCREMENT,
+    Name       VARCHAR(100) NOT NULL,
+    Country    VARCHAR(50)
+);
+
+CREATE TABLE Album (
+    AlbumID     INT PRIMARY KEY AUTO_INCREMENT,
+    Title       VARCHAR(150) NOT NULL,
+    ArtistID    INT NOT NULL,
+    Genre       VARCHAR(50),
+    ReleaseYear INT,
+    FOREIGN KEY (ArtistID) REFERENCES Artist(ArtistID)
+);
+
+CREATE TABLE Track (
+    TrackID   INT PRIMARY KEY AUTO_INCREMENT,
+    Title     VARCHAR(150) NOT NULL,
+    AlbumID   INT NOT NULL,
+    Duration  INT,           -- duration in seconds
+    FOREIGN KEY (AlbumID) REFERENCES Album(AlbumID)
+);
+\end{lstlisting}
+  \end{block}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{The Example Database -- Sample Data}
+  \begin{block}{Sample Rows}
+\begin{lstlisting}[style=sqlstyle]
+-- Artists
+INSERT INTO Artist VALUES (1, 'The Beatles',  'UK');
+INSERT INTO Artist VALUES (2, 'Kraftwerk',    'Germany');
+INSERT INTO Artist VALUES (3, 'Daft Punk',    'France');
+
+-- Albums
+INSERT INTO Album VALUES (1, 'Abbey Road',      1, 'Rock',        1969);
+INSERT INTO Album VALUES (2, 'Autobahn',        2, 'Electronic',  1974);
+INSERT INTO Album VALUES (3, 'Random Access Memories', 3, 'Electronic', 2013);
+
+-- Tracks (Duration in seconds)
+INSERT INTO Track VALUES (1, 'Come Together', 1, 259);
+INSERT INTO Track VALUES (2, 'Something',     1, 182);
+INSERT INTO Track VALUES (3, 'Autobahn',      2, 1373);
+INSERT INTO Track VALUES (4, 'Get Lucky',     3, 248);
+INSERT INTO Track VALUES (5, 'Instant Crush', 3, 337);
+\end{lstlisting}
   \end{block}
 \end{frame}

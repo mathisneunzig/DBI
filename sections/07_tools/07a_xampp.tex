@@ -1,22 +1,23 @@
 % ============================================================
-%  Section 6: Tools -- XAMPP & phpMyAdmin
+%  Section 7: Tools for Database Development
 % ============================================================
 \section{Tools for Database Development}
 
 % ------------------------------------------------------------
-\begin{frame}
-  \frametitle{XAMPP -- Overview}
-
+\begin{frame}{XAMPP -- Overview}
   \begin{block}{What Is XAMPP?}
-    \textbf{XAMPP} is a free, open-source software bundle that installs a fully functional local web server and database environment in minutes -- no manual configuration required.
+    \textbf{XAMPP} is a free, open-source software bundle that installs a fully
+    functional local web server and database environment in minutes.
     \begin{itemize}
-      \item Developed by \textbf{Apache Friends} since \textbf{2002}
-      \item Available for \textbf{Windows}, \textbf{macOS}, and \textbf{Linux} (hence ``cross-platform'')
-      \item Used in this course to host a local \textbf{MySQL\,/\,MariaDB} database for all exercises
+      \item Developed by \textbf{Apache Friends} since 2002
+      \item Available for \textbf{Windows}, \textbf{macOS}, and \textbf{Linux}
+            (hence ``cross-platform'' = X)
+      \item Used in this course to host a local \textbf{MySQL\,/\,MariaDB} database
     \end{itemize}
   \end{block}
 
   \begin{block}{The Acronym Explained}
+    \centering
     \begin{tabular}{@{}cl@{}}
       \textbf{X} & Cross-platform \\
       \textbf{A} & Apache HTTP Server \\
@@ -26,19 +27,18 @@
     \end{tabular}
   \end{block}
 
-  \begin{alertblock}{Why XAMPP?}
-    Zero configuration needed -- every component works out of the box. Ideal for local development and course exercises where setting up a production server would be overkill.
+  \begin{alertblock}{Why XAMPP for this course?}
+    Zero configuration -- every component works out of the box. Ideal for
+    local development where setting up a production server would be overkill.
   \end{alertblock}
 \end{frame}
 
 % ------------------------------------------------------------
-\begin{frame}
-  \frametitle{Installing XAMPP}
-
+\begin{frame}{XAMPP -- Installation}
   \begin{block}{Download \& Install}
     \begin{enumerate}
-      \item Download the installer from \textbf{apachefriends.org} (choose the version matching your OS)
-      \item Run the installer -- \textit{accepting the default paths is strongly recommended}
+      \item Download the installer from \textbf{apachefriends.org}
+      \item Run the installer -- \textit{accepting default paths is strongly recommended}
       \item Default installation directories:
         \begin{itemize}
           \item Windows: \texttt{C:\textbackslash xampp}
@@ -48,45 +48,61 @@
   \end{block}
 
   \begin{block}{After Installation: The Control Panel}
-    The \textbf{XAMPP Control Panel} is your central dashboard. It lists all bundled services:
+    The \textbf{XAMPP Control Panel} is your central dashboard:
     \begin{itemize}
-      \item Apache, \textbf{MySQL}, FileZilla, Mercury, Tomcat
+      \item Lists all bundled services: Apache, \textbf{MySQL}, FileZilla, Mercury
+      \item Click \textbf{``Start''} next to \textit{MySQL} to start the database
+      \item Status indicator turns \textcolor{green!60!black}{\textbf{green}} when running
     \end{itemize}
-    To start the database: click \textbf{``Start''} next to \textit{MySQL}.\\
-    The status indicator turns \textcolor{green!60!black}{\textbf{green}} when the service is running successfully.
   \end{block}
 
-  \begin{examples}{Typical First-Time Pitfall}
-    On Windows, port conflicts with Skype or IIS are common. If Apache or MySQL fail to start, check whether another process is already occupying port 80 (Apache) or port 3306 (MySQL).
+  \begin{examples}{Common First-Time Pitfall on Windows}
+    Port conflicts with Skype or IIS. If MySQL fails to start, check whether
+    another process occupies port \textbf{3306}. Fix: change XAMPP's port in
+    \texttt{my.ini} or stop the conflicting service.
   \end{examples}
 \end{frame}
 
 % ------------------------------------------------------------
-\begin{frame}
-  \frametitle{Starting and Accessing XAMPP}
+\begin{frame}{\textbf{[GRAPHIC PLACEHOLDER]} XAMPP Control Panel}
+  \begin{alertblock}{INSERT SCREENSHOT HERE}
+    Screenshot of the XAMPP Control Panel on Windows showing Apache and MySQL
+    both in green ``Running'' state, with port numbers visible.
+  \end{alertblock}
 
-  \begin{block}{Starting the Database Service}
+  \begin{block}{What you should see}
     \begin{itemize}
-      \item Open the XAMPP Control Panel and click \textbf{Start} next to \textit{MySQL}
-      \item Default port: \textbf{3306} (the MySQL/MariaDB standard port)
-      \item Default credentials:
-        \begin{itemize}
-          \item Username: \texttt{root}
-          \item Password: \textit{(empty by default)}
-        \end{itemize}
+      \item Apache on port 80 (green)
+      \item MySQL on port 3306 (green)
+      \item Buttons: Start / Stop / Admin / Config / Logs
     \end{itemize}
+  \end{block}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{XAMPP -- Starting and Accessing MySQL}
+  \begin{block}{Default Credentials}
+    \begin{tabular}{@{}ll@{}}
+      \textbf{Host}     & \texttt{localhost} \\
+      \textbf{Port}     & \texttt{3306} \\
+      \textbf{Username} & \texttt{root} \\
+      \textbf{Password} & \textit{(empty by default)} \\
+    \end{tabular}
   \end{block}
 
   \begin{alertblock}{Security Warning}
-    An empty root password is acceptable \textit{only} on a local development machine with no external network access. \textbf{Never} deploy XAMPP with default credentials in a production or publicly accessible environment!
+    An empty root password is acceptable \textit{only} on a local machine with
+    no external access. \textbf{Never} deploy XAMPP with default credentials
+    in a production environment!
   \end{alertblock}
 
   \begin{block}{Access Options}
     \begin{itemize}
-      \item \textbf{phpMyAdmin} (browser-based): navigate to \texttt{http://localhost/phpmyadmin}
-      \item \textbf{MySQL command line}: available directly from the XAMPP shell
-      \item \textbf{External SQL clients}: MySQL Workbench, DBeaver, DataGrip -- connect to \texttt{localhost:3306}
+      \item \textbf{phpMyAdmin} (browser): \texttt{http://localhost/phpmyadmin}
+      \item \textbf{MySQL command line}: available via the XAMPP shell button
+      \item \textbf{External SQL clients}: MySQL Workbench, DBeaver --
+            connect to \texttt{localhost:3306}
     \end{itemize}
-    \textit{For our exercises: use phpMyAdmin or MySQL Workbench.}
+    \textit{For this course: use phpMyAdmin (quick tasks) or DBeaver (SQL work).}
   \end{block}
 \end{frame}

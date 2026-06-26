@@ -1,32 +1,148 @@
 \subsection{Data Control Language}
-\begin{frame}[fragile]{GRANT and REVOKE (DCL)}
-  \begin{block}{Controlling Access to Database Objects}
-\begin{lstlisting}[style=sqlstyle]
--- Grant all privileges on a database to a user
-GRANT ALL ON supermarket.* TO 'admin'@'localhost';
 
--- Grant only SELECT on the whole database
-GRANT SELECT ON supermarket.* TO 'reader'@'%';
+% ----------------------------------------------------------
+\begin{frame}{DCL -- Data Control Language}
+  \textbf{DCL} controls \emph{who} can do \emph{what} in a database.
+  Two core statements: \texttt{GRANT} (give permissions) and \texttt{REVOKE} (take them away).
 
--- Grant specific privileges on a single table
-GRANT INSERT, UPDATE ON supermarket.product
-    TO 'editor'@'localhost';
-
--- Revoke a privilege
-REVOKE INSERT ON supermarket.product
-    FROM 'editor'@'localhost';
-\end{lstlisting}
+  \begin{block}{Privilege Types in MySQL}
+    \begin{columns}[T]
+      \column{0.48\linewidth}
+        \textbf{DML / Query privileges:}
+        \begin{itemize}
+          \item \texttt{SELECT}
+          \item \texttt{INSERT}
+          \item \texttt{UPDATE}
+          \item \texttt{DELETE}
+        \end{itemize}
+      \column{0.48\linewidth}
+        \textbf{Schema / Admin privileges:}
+        \begin{itemize}
+          \item \texttt{CREATE}, \texttt{DROP}
+          \item \texttt{ALTER}, \texttt{INDEX}
+          \item \texttt{GRANT OPTION}
+          \item \texttt{ALL PRIVILEGES}
+        \end{itemize}
+    \end{columns}
   \end{block}
 
   \begin{block}{Principle of Least Privilege}
-    \begin{itemize}
-      \item Grant only the \textbf{minimum permissions} a user or
-            application actually needs to do its job.
-      \item \textbf{Never} run application code as the \texttt{root} (or
-            \texttt{sa}) database user.
-      \item \texttt{'user'@'\%'} allows connections from \textbf{any host};
-            \texttt{'user'@'localhost'} restricts to the same machine only.
-            Prefer the more restrictive option wherever possible.
-    \end{itemize}
+    Grant only the \textbf{minimum permissions} a user or application actually needs.
+    Never run application code as \texttt{root}. A compromised application account
+    with only \texttt{SELECT} cannot delete or modify data.
+  \end{block}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{GRANT -- Giving Permissions}
+  \begin{lstlisting}[style=sqlstyle]
+-- Create a user first
+CREATE USER 'app_reader'@'localhost' IDENTIFIED BY 's3cr3t';
+
+-- Grant SELECT on the entire music_db database
+GRANT SELECT ON music_db.* TO 'app_reader'@'localhost';
+
+-- Grant specific privileges on a single table
+GRANT INSERT, UPDATE ON music_db.Track
+    TO 'app_editor'@'localhost';
+
+-- Grant ALL privileges (admin -- use with extreme care!)
+GRANT ALL PRIVILEGES ON music_db.*
+    TO 'db_admin'@'localhost'
+    WITH GRANT OPTION;  -- can pass privileges on to others
+
+-- Apply privilege changes immediately
+FLUSH PRIVILEGES;
+  \end{lstlisting}
+
+  \begin{itemize}
+    \item \texttt{'user'@'\%'}: connects from \textbf{any host}.
+    \item \texttt{'user'@'localhost'}: connects from \textbf{same machine only} (more secure).
+  \end{itemize}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{REVOKE -- Removing Permissions}
+  \begin{lstlisting}[style=sqlstyle]
+-- Remove INSERT from a specific table
+REVOKE INSERT ON music_db.Track
+    FROM 'app_editor'@'localhost';
+
+-- Remove all privileges from the database
+REVOKE ALL PRIVILEGES ON music_db.*
+    FROM 'app_reader'@'localhost';
+
+-- Show what privileges a user currently has
+SHOW GRANTS FOR 'app_reader'@'localhost';
+
+-- Remove a user entirely
+DROP USER 'app_reader'@'localhost';
+  \end{lstlisting}
+
+  \begin{alertblock}{REVOKE Does Not Cascade}
+    If user A granted privileges to user B using \texttt{WITH GRANT OPTION}, revoking
+    A's privileges does \textbf{not} automatically revoke B's derived privileges in MySQL.
+    You must revoke from each user individually.
+  \end{alertblock}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{Role-Based Access Control (RBAC)}
+  Managing privileges per-user becomes unmanageable at scale.
+  \textbf{Roles} group privileges and are then assigned to users.
+
+  \begin{lstlisting}[style=sqlstyle]
+-- Create roles (MySQL 8+)
+CREATE ROLE 'music_readonly', 'music_editor', 'music_admin';
+
+-- Assign privileges to roles
+GRANT SELECT ON music_db.* TO 'music_readonly';
+GRANT SELECT, INSERT, UPDATE, DELETE ON music_db.*
+    TO 'music_editor';
+GRANT ALL PRIVILEGES ON music_db.* TO 'music_admin';
+
+-- Assign roles to users
+GRANT 'music_readonly' TO 'alice'@'localhost';
+GRANT 'music_editor'   TO 'bob'@'localhost';
+GRANT 'music_admin'    TO 'carol'@'localhost';
+
+-- Set default role so it activates at login
+SET DEFAULT ROLE 'music_readonly' TO 'alice'@'localhost';
+  \end{lstlisting}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{RBAC -- Practical Architecture}
+  \begin{center}
+  \begin{tikzpicture}[
+    role/.style={draw, fill=blue!15, rounded corners, minimum width=2.6cm, minimum height=0.7cm, font=\small},
+    user/.style={draw, fill=green!15, rounded corners, minimum width=2.2cm, minimum height=0.6cm, font=\small},
+    priv/.style={draw, fill=orange!15, rounded corners, minimum width=3.4cm, minimum height=0.6cm, font=\footnotesize},
+    arrow/.style={->, thick}
+  ]
+    \node[role] (ro)   at (0,  3)   {music\_readonly};
+    \node[role] (edit) at (0,  1.5) {music\_editor};
+    \node[role] (adm)  at (0,  0)   {music\_admin};
+
+    \node[user] (alice) at (-3.5, 3)   {Alice};
+    \node[user] (bob)   at (-3.5, 1.5) {Bob};
+    \node[user] (carol) at (-3.5, 0)   {Carol};
+
+    \node[priv] (p1) at (4.2, 3)   {SELECT};
+    \node[priv] (p2) at (4.2, 1.5) {SELECT, INSERT, UPDATE, DELETE};
+    \node[priv] (p3) at (4.2, 0)   {ALL PRIVILEGES};
+
+    \draw[arrow] (alice) -- (ro);
+    \draw[arrow] (bob)   -- (edit);
+    \draw[arrow] (carol) -- (adm);
+    \draw[arrow] (ro)   -- (p1);
+    \draw[arrow] (edit) -- (p2);
+    \draw[arrow] (adm)  -- (p3);
+  \end{tikzpicture}
+  \end{center}
+
+  \begin{block}{RBAC Advantages}
+    When a user's responsibilities change, update one \texttt{GRANT} assignment -- not
+    dozens of individual privilege statements. Roles can also be nested.
   \end{block}
 \end{frame}

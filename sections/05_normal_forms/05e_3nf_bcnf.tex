@@ -1,122 +1,242 @@
 % ---------------------------------------------------------------------------
-\begin{frame}{Third Normal Form (3NF)}
+\begin{frame}{Third Normal Form (3NF) --- Definition}
   \begin{block}{Definition}
-    A relation is in \textbf{3NF} if it is in 2NF and no non-prime attribute is
-    \textbf{transitively dependent} on the primary key.  Every non-prime
-    attribute must depend \emph{directly} on the PK, not through another
-    non-prime attribute.
+    A relation is in \textbf{3NF} if it is in 2NF and for every non-trivial
+    FD $X \to A$, at least one of the following holds:
+    \begin{itemize}
+      \item $X$ is a \textbf{superkey}, OR
+      \item $A$ is a \textbf{prime attribute} (part of some candidate key)
+    \end{itemize}
+    Informally: \textbf{no non-prime attribute depends on another non-prime attribute}.
   \end{block}
 
-  \begin{itemize}
-    \item \textbf{Transitive dependency:}
-          $PK \to A \to B$, where $A$ is non-prime.  $B$ does not depend
-          directly on the PK; it reaches the PK via $A$.
-    \item In our \texttt{Albums} table:\\
-          $\texttt{AlbumID} \to \texttt{MainArtist} \to \texttt{Debut}$\\
-          The artist's debut year depends on the artist, not on the album.
-    \item \textbf{Fix:} Extract a separate \texttt{Artists} table:
-          \begin{itemize}
-            \item \texttt{Albums(\underline{AlbumID}, Title, ArtistID, Genre, Release)}
-            \item \texttt{Artists(\underline{ArtistID}, Name, Debut)}
-            \item \texttt{Songs(\underline{AlbumID, Song}, FeaturedArtist)}
-          \end{itemize}
-  \end{itemize}
-
-  \begin{block}{Why 3NF Matters in Practice}
-    Most production databases are designed to 3NF.  It eliminates the most
-    common anomalies with reasonable decomposition effort.  The
-    \textbf{Synthesis Algorithm} always produces a 3NF schema that is both
-    lossless and dependency-preserving.
+  \begin{block}{Transitive Dependency: The Target}
+    A \textbf{transitive dependency} exists when:
+    \[
+      PK \;\to\; A \;\to\; B
+      \quad \text{where } A \text{ and } B \text{ are both non-prime}
+    \]
+    $B$ does not depend \emph{directly} on the primary key; it reaches
+    the PK via the non-prime attribute $A$.
   \end{block}
 \end{frame}
 
 % ---------------------------------------------------------------------------
-\begin{frame}{Boyce-Codd Normal Form (BCNF)}
-  \begin{block}{Definition}
-    A relation is in \textbf{BCNF} (sometimes called \emph{3.5NF}) if it is in
-    3NF and for \emph{every} non-trivial FD $A \to B$, $A$ is a
-    \textbf{superkey}.
+\begin{frame}{3NF --- Identifying the Problem in Our Example}
+  After 2NF we have:
+  \[
+    \texttt{Albums(\underline{AlbumID},\; Title,\; Artist,\; Debut,\; Genre,\; Release)}
+  \]
+
+  \vspace{4pt}
+  \begin{block}{Functional Dependencies in \texttt{Albums}}
+    \begin{itemize}
+      \item $\texttt{AlbumID} \to \texttt{Artist}$ \quad (direct)
+      \item $\texttt{Artist} \to \texttt{Debut}$ \quad (artist determines their debut year)
+      \item Therefore: $\texttt{AlbumID} \to \texttt{Artist} \to \texttt{Debut}$
+            \textbf{--- transitive!}
+    \end{itemize}
   \end{block}
 
-  \begin{itemize}
-    \item BCNF is \textbf{strictly stronger} than 3NF: it catches edge cases
-          where 3NF still permits anomalies.
-    \item In 3NF, the right-hand side of an FD is allowed to be a prime
-          attribute; BCNF \emph{disallows} this exception.
-    \item \textbf{Example violation:}
-          \texttt{Releases(\underline{ID, Edition}, LabelID, Label)}\\
-          FDs: $\texttt{LabelID} \to \texttt{Label}$ and
-          $\texttt{Label} \to \texttt{LabelID}$.\\
-          Neither \texttt{LabelID} nor \texttt{Label} is a superkey, yet they
-          determine each other --- a BCNF violation.
-    \item \textbf{Fix:} Decompose into:\\
-          \texttt{Releases(\underline{ID, Edition}, LabelID)} and
-          \texttt{Labels(\underline{LabelID}, Label)}
-  \end{itemize}
-
-  \begin{alertblock}{Trade-off}
-    BCNF \emph{may not preserve all FDs} after decomposition.  If
-    dependency-preservation is critical, 3NF (via the Synthesis Algorithm) may
-    be preferred.
+  \begin{alertblock}{The Problem}
+    \texttt{Debut} does not depend directly on \texttt{AlbumID}.  It reaches
+    the PK \emph{via} the non-prime attribute \texttt{Artist}.\\[4pt]
+    \textbf{Consequence:} If Taylor Swift changes her official debut year
+    (e.g.\ corrected biography), we must update \emph{every} row in
+    \texttt{Albums} that references her.
   \end{alertblock}
 \end{frame}
 
 % ---------------------------------------------------------------------------
-\begin{frame}{BCNF -- Example}
-  \textbf{Before (not in BCNF):}
-  \vspace{4pt}
+\begin{frame}{3NF --- The Fix}
+  \textbf{Solution:} Extract the transitive dependency into its own table.
 
-  \small
-  \begin{tabular}{llll}
-    \hline
-    \textbf{ID} & \textbf{Edition} & \textbf{LabelID} & \textbf{Label} \\
-    \hline
-    A100 & 3am Edition        & REP & Republic Records  \\
-    A101 & Late Night Edition & UMG & Universal Music   \\
-    \hline
-  \end{tabular}
-  \normalsize
-
-  \vspace{8pt}
-  FDs: $\{\texttt{ID, Edition}\} \to \texttt{LabelID} \to \texttt{Label}$
-  and $\texttt{Label} \to \texttt{LabelID}$.\\
-  \texttt{LabelID} is \textbf{not} a superkey, yet $\texttt{LabelID} \to
-  \texttt{Label}$ --- \textbf{BCNF violation}!
-
-  \vspace{8pt}
-  \textbf{After (BCNF):}
-  \vspace{4pt}
-
-  \small
-  \begin{columns}
-    \begin{column}{0.45\textwidth}
-      \begin{tabular}{lll}
-        \hline
-        \multicolumn{3}{c}{\textbf{Releases}} \\
-        \hline
-        \textbf{ID} & \textbf{Edition} & \textbf{LabelID} \\
-        \hline
-        A100 & 3am Edition        & REP \\
-        A101 & Late Night Edition & UMG \\
-        \hline
+  \vspace{0.5em}
+  \begin{columns}[t]
+    \begin{column}{0.52\textwidth}
+      \textbf{Albums} (\underline{AlbumID})
+      \small
+      \begin{tabular}{lllll}
+        \toprule
+        \textbf{AlbumID} & \textbf{Title} & \textbf{ArtistID} & \textbf{Genre} & \textbf{Rel.} \\
+        \midrule
+        A100 & Midnights & AR01 & Pop & 2022 \\
+        A101 & 1989 (TV) & AR01 & Pop & 2023 \\
+        \bottomrule
       \end{tabular}
     \end{column}
-    \begin{column}{0.35\textwidth}
-      \begin{tabular}{ll}
-        \hline
-        \multicolumn{2}{c}{\textbf{Labels}} \\
-        \hline
-        \textbf{LabelID} & \textbf{Label} \\
-        \hline
-        REP & Republic Records \\
-        UMG & Universal Music  \\
-        \hline
+    \begin{column}{0.42\textwidth}
+      \textbf{Artists} (\underline{ArtistID})
+      \small
+      \begin{tabular}{lll}
+        \toprule
+        \textbf{ArtistID} & \textbf{Name} & \textbf{Debut} \\
+        \midrule
+        AR01 & Taylor Swift & 2006 \\
+        AR02 & SZA          & 2012 \\
+        \bottomrule
       \end{tabular}
     \end{column}
   \end{columns}
+
+  \vspace{0.6em}
+  \begin{block}{Final Schema After 3NF}
+    \begin{itemize}
+      \item \texttt{Artists(\underline{ArtistID}, Name, Debut)}
+      \item \texttt{Albums(\underline{AlbumID}, Title, ArtistID\textsuperscript{FK}, Genre, Release)}
+      \item \texttt{Songs(\underline{AlbumID, Song}, FeaturedArtist)}
+    \end{itemize}
+    Debut year is stored \textbf{exactly once} in \texttt{Artists}.
+    No anomalies remain.
+  \end{block}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{Boyce-Codd Normal Form (BCNF) --- Definition}
+  \begin{block}{Definition}
+    A relation is in \textbf{BCNF} (also: \emph{3.5NF}) if for
+    \emph{every} non-trivial FD $X \to A$:
+    \[
+      X \text{ must be a \textbf{superkey}}
+    \]
+    No exceptions allowed.
+  \end{block}
+
+  \begin{columns}[t]
+    \begin{column}{0.5\textwidth}
+      \textbf{3NF vs.\ BCNF}
+      \begin{itemize}
+        \item 3NF \emph{allows} the RHS of an FD to be a prime attribute
+              even if the LHS is not a superkey
+        \item BCNF \textbf{removes this exception}: every FD must have a
+              superkey on the left
+        \item BCNF is \textbf{strictly stronger} than 3NF
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \begin{alertblock}{Trade-off}
+        BCNF decomposition is always \textbf{lossless} but may \textbf{not
+        preserve all FDs}.\\[4pt]
+        If dependency-preservation is critical, use 3NF via the Synthesis
+        Algorithm instead.
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{BCNF --- Classic Example: Overlapping Candidate Keys}
+  \begin{block}{Relation \texttt{CourseTeacher}}
+    Schema: \texttt{(Student, Course, Teacher)}\\[4pt]
+    FDs:
+    \begin{itemize}
+      \item $\{\texttt{Student, Course}\} \to \texttt{Teacher}$ \quad (one teacher per student per course)
+      \item $\texttt{Teacher} \to \texttt{Course}$ \quad (each teacher teaches exactly one course)
+    \end{itemize}
+    Candidate keys: $\{\texttt{Student, Course}\}$ and $\{\texttt{Student, Teacher}\}$
+  \end{block}
+
+  \begin{columns}[t]
+    \begin{column}{0.47\textwidth}
+      \textbf{Is it 3NF?}\\[2pt]
+      FD $\texttt{Teacher} \to \texttt{Course}$:\\
+      \texttt{Course} is a prime attribute\\
+      (in key $\{\texttt{Student, Course}\}$)\\
+      $\Rightarrow$ 3NF \textbf{allows} this.
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \textbf{Is it BCNF?}\\[2pt]
+      FD $\texttt{Teacher} \to \texttt{Course}$:\\
+      \texttt{Teacher} alone is \textbf{not} a superkey.\\
+      $\Rightarrow$ BCNF \textbf{violation!}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.4em}
+  \begin{block}{BCNF Decomposition}
+    $\texttt{TeacherCourse(\underline{Teacher}, Course)}$ \quad and \quad
+    $\texttt{StudentTeacher(\underline{Student}, \underline{Teacher})}$
+  \end{block}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{BCNF --- Music Example: Labels}
+  \textbf{Before (3NF but not BCNF):}
+
+  \vspace{4pt}
+  \small
+  \begin{center}
+  \begin{tabular}{llll}
+    \toprule
+    \textbf{\underline{AlbumID}} & \textbf{\underline{Edition}} & \textbf{LabelID} & \textbf{LabelName} \\
+    \midrule
+    A100 & 3am Edition        & REP & Republic Records \\
+    A101 & Late Night Edition & UMG & Universal Music  \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
   \normalsize
 
+  \vspace{4pt}
+  FDs: $\{\texttt{AlbumID, Edition}\} \to \texttt{LabelID} \to \texttt{LabelName}$
+  and $\texttt{LabelName} \to \texttt{LabelID}$.\\
+  \texttt{LabelID} is \textbf{not} a superkey, yet $\texttt{LabelID} \to \texttt{LabelName}$
+  --- \textbf{BCNF violation!}
+
   \vspace{6pt}
-  Now every determinant (\texttt{ID}+\texttt{Edition} and \texttt{LabelID}) is
-  a superkey. BCNF satisfied.
+  \textbf{After BCNF decomposition:}
+
+  \begin{columns}[t]
+    \begin{column}{0.45\textwidth}
+      \small\textbf{Releases (\underline{AlbumID, Edition})}
+      \begin{tabular}{lll}
+        \toprule
+        \textbf{AlbumID} & \textbf{Edition} & \textbf{LabelID} \\
+        \midrule
+        A100 & 3am Edition        & REP \\
+        A101 & Late Night Edition & UMG \\
+        \bottomrule
+      \end{tabular}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      \small\textbf{Labels (\underline{LabelID})}
+      \begin{tabular}{ll}
+        \toprule
+        \textbf{LabelID} & \textbf{LabelName} \\
+        \midrule
+        REP & Republic Records \\
+        UMG & Universal Music  \\
+        \bottomrule
+      \end{tabular}
+    \end{column}
+  \end{columns}
+
+  \vspace{4pt}
+  \normalsize Every determinant is now a superkey. BCNF satisfied. \checkmark
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{3NF vs.\ BCNF --- Summary}
+  \begin{center}
+    \small
+    \begin{tabular}{lll}
+      \toprule
+      & \textbf{3NF} & \textbf{BCNF} \\
+      \midrule
+      Condition         & LHS superkey \emph{or} RHS prime attr. & LHS must be superkey \\
+      Strength          & Weaker                                  & Strictly stronger \\
+      Lossless?         & Always                                  & Always \\
+      Dependency-pres.? & Always (Synthesis Alg.)                 & Not guaranteed \\
+      Practical use     & Most production systems                 & When anomalies remain after 3NF \\
+      \bottomrule
+    \end{tabular}
+  \end{center}
+
+  \vspace{0.5em}
+  \begin{block}{Rule of Thumb}
+    Start with the \textbf{Synthesis Algorithm} to reach 3NF with all
+    dependencies preserved.  Apply BCNF decomposition only if residual anomalies
+    exist and losing some FD constraints is acceptable (or can be enforced via
+    triggers/application logic).
+  \end{block}
 \end{frame}

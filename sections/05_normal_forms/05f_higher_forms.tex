@@ -1,117 +1,144 @@
 % ---------------------------------------------------------------------------
-\begin{frame}{4NF \textbf{(!)}}
+\begin{frame}{4NF --- The Problem: Independent Multi-Valued Facts \textbf{(!)}}
+  \begin{block}{Motivation}
+    After BCNF, a relation can still contain \textbf{redundancy} caused by
+    independent multi-valued facts being stored in the same table.
+  \end{block}
+
+  Consider a customer who has \textbf{multiple phone numbers} AND \textbf{multiple
+  addresses} --- both \emph{independent} of each other.
+
+  \vspace{6pt}
+  \begin{center}
+  \scriptsize
+  \begin{tabular}{lll}
+    \toprule
+    \textbf{CustomerCode} & \textbf{Phone} & \textbf{Address} \\
+    \midrule
+    C001 & 0711-123 & Hauptstr.\ 1, Stuttgart \\
+    C001 & 0711-123 & Bahnhofstr.\ 5, Stuttgart \\
+    C001 & 0152-456 & Hauptstr.\ 1, Stuttgart \\
+    C001 & 0152-456 & Bahnhofstr.\ 5, Stuttgart \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \normalsize
+
+  \vspace{4pt}
+  \begin{alertblock}{The Problem: Cartesian Product}
+    Every phone number is paired with every address --- even though they are
+    \textbf{independent} facts.  2 phones $\times$ 2 addresses = 4 rows.
+    Adding one new phone number requires inserting \emph{two} rows.
+  \end{alertblock}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{4NF --- Definition and Fix \textbf{(!)}}
   \begin{block}{Definition \textbf{(!)}}
-    A relation is in \textbf{4NF} if it is in BCNF and has no
+    A relation is in \textbf{4NF} if it is in BCNF and contains no
     \textbf{non-trivial multi-valued dependencies (MVDs)}.
 
     An MVD $A \twoheadrightarrow B$ is \emph{non-trivial} if $B \not\subseteq A$
     and $A \cup B \neq R$.
   \end{block}
 
-  \begin{itemize}
-    \item \textbf{The Problem:}
-          $\texttt{CustomerCode} \twoheadrightarrow \texttt{Phones}$ and
-          $\texttt{CustomerCode} \twoheadrightarrow \texttt{Addresses}$.\\
-          Phones and addresses are \emph{independent} sets associated with the
-          same customer.
-    \item After 1NF, storing both in one table forces a \emph{Cartesian product}:
-          every phone is paired with every address, producing redundant and
-          potentially spurious rows.
-    \item \textbf{Fix:} Decompose into two tables:
-          \begin{itemize}
-            \item \texttt{Customers\_Phones(\underline{CustomerCode, Phone})}
-            \item \texttt{Customers\_Addresses(\underline{CustomerCode, Address})}
-          \end{itemize}
-    \item Now each independent multi-valued fact lives in its own table; no
-          Cartesian product arises.
-  \end{itemize}
+  \begin{block}{The MVDs in Our Example}
+    $\texttt{CustomerCode} \twoheadrightarrow \texttt{Phone}$ \quad
+    (customer has a set of phones)\\
+    $\texttt{CustomerCode} \twoheadrightarrow \texttt{Address}$ \quad
+    (customer has a set of addresses)\\
+    These two facts are \textbf{independent} of each other --- 4NF violation.
+  \end{block}
+
+  \begin{block}{Fix: One Table Per Independent Multi-Valued Fact}
+    \begin{itemize}
+      \item \texttt{CustomerPhone(\underline{CustomerCode, Phone})}
+      \item \texttt{CustomerAddress(\underline{CustomerCode, Address})}
+    \end{itemize}
+    Now each fact lives in its own table.  No spurious Cartesian product.
+  \end{block}
 \end{frame}
 
 % ---------------------------------------------------------------------------
-\begin{frame}{5NF \textbf{(!)}}
+\begin{frame}{5NF --- Project-Join Normal Form \textbf{(!)}}
   \begin{block}{Definition \textbf{(!)}}
-    A relation is in \textbf{5NF} (also called \emph{Project-Join Normal Form,
-    PJNF}) if it is in 4NF and cannot be further decomposed in a
-    \textbf{lossless} way.
+    A relation is in \textbf{5NF} (also called \emph{PJNF}) if it is in 4NF
+    and cannot be further \textbf{losslessly} decomposed.
   \end{block}
 
-  \begin{itemize}
-    \item \textbf{Lossless decomposition:} Decomposing $R$ into
-          $R_1, R_2, \ldots$ is lossless if
-          $R_1 \bowtie R_2 \bowtie \cdots = R$ exactly (no spurious tuples).
-    \item If decomposing into 2 tables produces extra (spurious) tuples when
-          joined back, the decomposition is \emph{lossy} and a 3-table
-          decomposition is required.
-    \item \textbf{Example:} A \texttt{Lecturer-Course-Subject} table with
-          complex business constraints (which lecturers teach which subjects in
-          which courses) may need 3 separate tables to decompose losslessly.
-    \item 5NF deals with \textbf{join dependencies} --- generalisations of
-          multi-valued dependencies.
-    \item Rarely implemented in practice; most experts stop at 3NF or BCNF.
-  \end{itemize}
+  \begin{block}{Key Concepts}
+    \begin{itemize}
+      \item \textbf{Lossless:} $R_1 \rajoin R_2 \rajoin \cdots = R$ exactly
+            (no spurious tuples added).
+      \item A 2-table split that produces extra rows when rejoined is
+            \emph{lossy} --- a 3-table decomposition may be needed.
+      \item 5NF deals with \textbf{join dependencies} (generalisations of MVDs).
+    \end{itemize}
+  \end{block}
 
   \begin{alertblock}{Practical Note}
-    Verifying 5NF requires checking all possible join dependencies, which is
-    computationally expensive and usually unnecessary for typical business
-    applications.
+    Rarely implemented in practice.  Most practitioners stop at 3NF or BCNF.
+    Verifying 5NF requires checking all possible join dependencies ---
+    computationally expensive and usually unnecessary.
   \end{alertblock}
 \end{frame}
 
 % ---------------------------------------------------------------------------
 \begin{frame}{Even Higher Normal Forms \textbf{(!)}}
-  Beyond 5NF, a number of further normal forms have been defined, mostly in
-  academic research.
+  Beyond 5NF, further normal forms have been defined mostly in academic research.
 
   \begin{itemize}
-    \item \textbf{6NF:} Every relation contains the primary key and
-          \emph{at most one} non-key attribute.  Useful for
-          \textbf{temporal databases} where attributes change independently over
-          time.  Proposed by C.\ J.\ Date, Hugh Darwen, and Nikos Lorentzos
-          (2002).
-    \item \textbf{EKNF (Elementary Key NF):} A stricter version of 3NF that
-          rules out certain 3NF-compliant but anomalous schemas.
-    \item \textbf{ETNF (Essential Tuple NF):} A stricter version of 4NF;
-          eliminates certain redundancies not addressed by 4NF.
-    \item \textbf{DKNF (Domain-Key NF):} Every integrity constraint in the
-          relation is a \emph{logical consequence} of domain constraints and key
-          constraints.  Considered the ``ultimate'' normal form --- if achieved,
-          all anomalies are guaranteed to be absent.
+    \item \textbf{6NF:} Every relation contains the PK and \emph{at most one}
+          non-key attribute.  Useful for \textbf{temporal databases} where
+          attributes change independently over time.
+          (Date, Darwen, Lorentzos, 2002)
+    \item \textbf{EKNF (Elementary Key NF):} A stricter variant of 3NF;
+          rules out certain anomalous 3NF schemas.
+    \item \textbf{ETNF (Essential Tuple NF):} Stricter than 4NF; eliminates
+          redundancies that 4NF does not address.
+    \item \textbf{DKNF (Domain-Key NF):} Every integrity constraint is a logical
+          consequence of domain and key constraints.  Considered the
+          ``ultimate'' normal form --- all anomalies guaranteed absent.
   \end{itemize}
 
   \begin{alertblock}{Practical Guidance}
     Most of these forms are \textbf{academic}.  In practice:
     \begin{itemize}
       \item Aim for \textbf{3NF minimum} for all production schemas.
-      \item \textbf{BCNF is ideal} when dependency preservation can be
-            verified externally.
+      \item \textbf{BCNF} is ideal when dependency preservation can be
+            verified externally or enforced by application logic.
     \end{itemize}
   \end{alertblock}
 \end{frame}
 
 % ---------------------------------------------------------------------------
 \begin{frame}{Normal Forms: The Big Picture \textbf{(!)}}
-  \small
+  \begin{center}
+  \scriptsize
   \begin{tabular}{lcccccccc}
-    \hline
+    \toprule
     \textbf{Constraint} & \textbf{UNF} & \textbf{1NF} & \textbf{2NF} & \textbf{3NF} & \textbf{BCNF} & \textbf{4NF} & \textbf{5NF} & \textbf{6NF} \\
-    \hline
-    Unique rows                        &   & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
-    Atomic values (1NF)                &   &            & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
-    No partial FDs (2NF)               &   &            &            & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
-    No transitive FDs (3NF)            &   &            &            &            & \checkmark & \checkmark & \checkmark & \checkmark \\
-    Every FD has superkey determinant  &   &            &            &            &            & \checkmark & \checkmark & \checkmark \\
-    No nontrivial MVDs (4NF)           &   &            &            &            &            &            & \checkmark & \checkmark \\
-    No lossy decompositions (5NF)      &   &            &            &            &            &            &            & \checkmark \\
-    Only trivial join dependencies     &   &            &            &            &            &            &            &            \\
-    (6NF)                              &   &            &            &            &            &            &            & \checkmark \\
-    \hline
+    \midrule
+    Atomic values (no lists)           & & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+    No partial FDs                     & & & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+    No transitive FDs                  & & & & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+    Every FD LHS is a superkey         & & & & & \checkmark & \checkmark & \checkmark & \checkmark \\
+    No non-trivial MVDs                & & & & & & \checkmark & \checkmark & \checkmark \\
+    No lossy 2-table decomposition     & & & & & & & \checkmark & \checkmark \\
+    PK + at most one non-key attr.     & & & & & & & & \checkmark \\
+    \bottomrule
   \end{tabular}
+  \end{center}
   \normalsize
 
-  \vspace{8pt}
-  \begin{block}{Reading This Table}
-    Each column represents a normal form.  A \checkmark{} means the constraint
-    is \emph{guaranteed} by that normal form and all higher ones.  The table
-    shows how each NF strictly extends its predecessor.
+  \vspace{6pt}
+  \begin{block}{How to Read This Table}
+    A \checkmark{} means the constraint is \emph{guaranteed} by that normal form
+    and all higher ones.  Each NF strictly extends its predecessor.
+  \end{block}
+
+  \begin{block}{Practical Target}
+    \textbf{3NF} for most systems --- \textbf{BCNF} when additional precision is
+    needed and FD loss is acceptable.
   \end{block}
 \end{frame}

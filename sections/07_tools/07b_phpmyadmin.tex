@@ -1,30 +1,67 @@
 % ------------------------------------------------------------
-\begin{frame}
-  \frametitle{phpMyAdmin}
-
+\begin{frame}{phpMyAdmin -- Overview}
   \begin{block}{What Is phpMyAdmin?}
-    \textbf{phpMyAdmin} is a free, browser-based administration tool for MySQL and MariaDB databases. It ships pre-installed with XAMPP and requires no additional setup.\\[0.4em]
-    Access it at: \texttt{http://localhost/phpmyadmin} (after starting MySQL in XAMPP)
+    \textbf{phpMyAdmin} is a free, browser-based administration tool for MySQL
+    and MariaDB. It ships pre-installed with XAMPP -- no extra setup required.\\[0.4em]
+    Access at: \texttt{http://localhost/phpmyadmin} (after starting MySQL in XAMPP)
   \end{block}
 
   \begin{block}{Core Capabilities}
     \begin{itemize}
       \item Create, modify, and drop \textbf{databases} and \textbf{tables}
       \item Execute \textbf{SQL queries} directly in the browser
-      \item \textbf{Import} (CSV, SQL dump) and \textbf{export} data in multiple formats
+      \item \textbf{Import} (CSV, SQL dump) and \textbf{export} in multiple formats
       \item Manage \textbf{users and permissions}
-      \item Browse and edit table contents visually (without writing SQL)
+      \item Browse and edit table contents visually (no SQL needed)
     \end{itemize}
   \end{block}
 
-  \begin{block}{UI Layout}
-    \begin{itemize}
-      \item \textbf{Left panel}: collapsible tree of databases and their tables
-      \item \textbf{Right panel}: operations area -- SQL editor, table structure view, import/export forms
-    \end{itemize}
-  \end{block}
-
-  \begin{alertblock}{Limitation}
-    phpMyAdmin is not well suited for large datasets or complex schema design. For entity-relationship diagrams and structured schema work, use \textbf{MySQL Workbench} instead.
+  \begin{alertblock}{When to use phpMyAdmin vs.\ DBeaver}
+    \begin{tabular}{@{}ll@{}}
+      \textbf{phpMyAdmin}  & Quick admin tasks, import/export, user management \\
+      \textbf{DBeaver}     & Writing and testing SQL, handling large result sets \\
+    \end{tabular}
   \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{phpMyAdmin -- UI Layout}
+  \begin{block}{Two-Panel Interface}
+    \begin{itemize}
+      \item \textbf{Left panel}: collapsible tree of databases and tables
+      \item \textbf{Right panel}: active work area
+        \begin{itemize}
+          \item \textit{Structure} tab: columns, types, indexes, constraints
+          \item \textit{SQL} tab: free-form SQL editor with syntax highlighting
+          \item \textit{Insert} tab: form-based row insertion
+          \item \textit{Export/Import} tabs: dump and restore data
+        \end{itemize}
+    \end{itemize}
+  \end{block}
+
+  \begin{examples}{Typical Workflow for Course Exercises}
+    \begin{enumerate}
+      \item Select your database in the left panel
+      \item Click the \textbf{SQL} tab
+      \item Type your query and press \textbf{Go}
+      \item Results appear as a table below the editor
+    \end{enumerate}
+  \end{examples}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}{\textbf{[GRAPHIC PLACEHOLDER]} phpMyAdmin Interface}
+  \begin{alertblock}{INSERT SCREENSHOT HERE}
+    Screenshot of phpMyAdmin showing the SQL editor tab with a simple
+    SELECT query entered and the result table displayed below.
+  \end{alertblock}
+
+  \begin{block}{Key UI elements to point out}
+    \begin{itemize}
+      \item Database tree on the left
+      \item SQL input area in the centre
+      \item Results grid below
+      \item Export button for downloading results
+    \end{itemize}
+  \end{block}
 \end{frame}

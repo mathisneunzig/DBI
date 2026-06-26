@@ -1,113 +1,132 @@
 \section{Backup and Recovery}
 
 \begin{frame}{Why Backup and Recovery?}
-  Data is one of the most valuable assets of any organisation. Hardware can be replaced in hours;
-  data that is lost without a backup may be lost forever. Even a brief period of data unavailability
-  can cause significant financial and reputational damage.
+  Data is one of the most valuable assets of any organisation. Hardware can be
+  replaced in hours; lost data may be gone forever.
 
-  \medskip
-  Every production database system \textbf{must} have a well-defined backup and recovery strategy
-  before going live -- not after the first incident.
-
-  \medskip
-  \begin{block}{Two key metrics for every recovery strategy}
+  \begin{block}{Two Key Metrics}
     \begin{itemize}
-      \item \textbf{RTO -- Recovery Time Objective}: the maximum acceptable duration of system
-            downtime after a failure. ``How long can we afford to be offline?''
-      \item \textbf{RPO -- Recovery Point Objective}: the maximum acceptable amount of data loss
-            measured in time. ``How much data can we afford to lose?''
+      \item \textbf{RTO -- Recovery Time Objective}: maximum acceptable downtime.\\
+            \textit{``How long can we afford to be offline?''}\\
+            Example: RTO = 2\,h means the system \textbf{must be back online within 2 hours}.
+      \item \textbf{RPO -- Recovery Point Objective}: maximum acceptable data loss in time.\\
+            \textit{``How much data can we afford to lose?''}\\
+            Example: RPO = 4\,h means we \textbf{accept losing up to 4 hours of transactions}.
     \end{itemize}
   \end{block}
 
-  \medskip
-  Example: an online bank might have an RTO of 1 hour and an RPO of 0 minutes (no data loss
-  permitted). A small internal tool might tolerate an RTO of 1 day and an RPO of 24 hours.
-  Your backup strategy must be designed to meet these targets.
-\end{frame}
-
-\begin{frame}{Backups}
-  \begin{block}{Definition}
-    A \textbf{backup} is a copy of database data saved at a specific point in time. It is used to
-    restore the database after data loss, corruption, accidental deletion, or hardware failure.
-  \end{block}
-
-  \medskip
-  \textbf{Common backup strategies -- from coarsest to finest granularity:}
-
-  \begin{itemize}
-    \item \textbf{Full backup (e.g.\ weekly)}: a complete copy of the entire database. Reliable and
-          self-contained -- restore from this alone is possible. Downside: slow to create and
-          requires the most storage.
-    \item \textbf{Differential backup (e.g.\ daily)}: copies only the data that has changed since
-          the \emph{last full backup}. Faster and smaller than a full backup; restore requires the
-          last full backup plus the most recent differential.
-    \item \textbf{Incremental backup (e.g.\ hourly)}: copies only data changed since the
-          \emph{last backup of any type}. Smallest and fastest; restore requires the full backup,
-          every differential, and every incremental in sequence.
-    \item \textbf{Transaction log backup}: saves a continuous log of every individual change. Enables
-          \textbf{point-in-time recovery} -- restore to any moment, not just the last backup time.
-  \end{itemize}
-
-  \medskip
-  \begin{examples}{Typical strategy in practice}
-    Full backup on Sunday night + differential every other night + log backup every hour.
+  \begin{examples}{Real-World Examples}
+    \begin{tabular}{@{}llll@{}}
+      \toprule
+      \textbf{System} & \textbf{RTO} & \textbf{RPO} & \textbf{Strategy} \\
+      \midrule
+      Online bank      & 1\,h    & 0\,min   & Real-time replication \\
+      E-commerce shop  & 30\,min & 1\,h     & Hourly log backups \\
+      Internal HR tool & 1\,day  & 24\,h    & Nightly full backup \\
+      \bottomrule
+    \end{tabular}
   \end{examples}
 \end{frame}
 
-\begin{frame}{Recovery}
-  \begin{block}{Definition}
-    \textbf{Recovery} is the process of restoring a database to a correct, consistent, and usable
-    state after any type of failure.
+\begin{frame}{Backup Strategies}
+  \begin{block}{Four Types -- From Coarsest to Finest}
+    \begin{tabular}{@{}p{2.4cm}p{4.2cm}p{3.5cm}@{}}
+      \toprule
+      \textbf{Type} & \textbf{What is copied} & \textbf{Restore needs} \\
+      \midrule
+      \textbf{Full} (weekly) &
+        Entire database &
+        Only this backup \\[4pt]
+      \textbf{Differential} (daily) &
+        Changes since last \emph{full} backup &
+        Last full + this diff \\[4pt]
+      \textbf{Incremental} (hourly) &
+        Changes since last backup \emph{of any type} &
+        Full + all diffs + all incrementals \\[4pt]
+      \textbf{Log backup} (continuous) &
+        Transaction log stream &
+        Full + logs $\Rightarrow$ point-in-time restore \\
+      \bottomrule
+    \end{tabular}
   \end{block}
 
-  \medskip
-  \textbf{Common failure scenarios:}
+  \begin{examples}{Typical Production Strategy}
+    Full backup \textbf{Sunday night} + Differential \textbf{Mon--Sat night} +
+    Log backup \textbf{every hour}.\\
+    Maximum data loss (RPO): 1 hour. Restore: 2 backups + logs.
+  \end{examples}
+\end{frame}
 
-  \begin{itemize}
-    \item \textbf{Software issues}: application bugs that corrupt data, a transaction that completes
-          partially before crashing, or a developer running \texttt{DELETE FROM orders} without a
-          \texttt{WHERE} clause.
-    \item \textbf{Hardware issues}: sudden power outage, disk head crash, server room fire or flood,
-          failed storage controller.
-    \item \textbf{Human error}: accidental \texttt{DROP TABLE}, updating the wrong rows, importing
-          bad data that overwrites good data.
-  \end{itemize}
+\begin{frame}{Recovery -- Failure Scenarios}
+  \begin{block}{What Can Go Wrong?}
+    \begin{itemize}
+      \item \textbf{Software issues}: app bug corrupts data; transaction crashes mid-execution;
+            developer runs \texttt{DELETE FROM orders} without \texttt{WHERE}
+      \item \textbf{Hardware issues}: sudden power outage, disk head crash, server room flood,
+            failed RAID controller
+      \item \textbf{Human error}: accidental \texttt{DROP TABLE}, importing bad CSV that
+            overwrites good data, wrong rows updated
+    \end{itemize}
+  \end{block}
 
-  \medskip
-  \textbf{Standard recovery process (3 steps):}
-  \begin{enumerate}
-    \item Restore the most recent \textbf{full backup} to get a consistent baseline.
-    \item Apply the most recent \textbf{differential backup} to bring data closer to the failure
-          point.
-    \item Replay all \textbf{transaction log backups} in chronological order up to the desired
-          recovery point in time.
-  \end{enumerate}
+  \begin{alertblock}{Classic Horror Story}
+    A developer runs \texttt{UPDATE orders SET status = 'shipped'} without a \texttt{WHERE}
+    clause in production. All 500,000 orders are now marked as shipped.
+    Without a recent backup + transaction log, this data is \textbf{permanently lost}.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Recovery -- The Three-Step Process}
+  \begin{block}{Standard Recovery Process}
+    \begin{enumerate}
+      \item Restore the most recent \textbf{full backup} -- consistent baseline
+      \item Apply the most recent \textbf{differential backup} -- advance to last night
+      \item Replay \textbf{transaction log backups} in order up to the recovery point
+    \end{enumerate}
+  \end{block}
+
+  \begin{block}{Example Timeline}
+    \begin{tabular}{@{}ll@{}}
+      \toprule
+      \textbf{Time} & \textbf{Event} \\
+      \midrule
+      Sunday 23:00  & Full backup taken (4\,GB) \\
+      Monday 23:00  & Differential backup (300\,MB) \\
+      Tuesday 10:00--14:00 & Log backups every hour (50\,MB each) \\
+      Tuesday 14:37 & \textcolor{red}{\textbf{Crash!}} \\
+      Recovery & Full + Diff + Logs $\Rightarrow$ restore to 14:00 \\
+      \bottomrule
+    \end{tabular}
+  \end{block}
+
+  \begin{alertblock}{Backup Window Placeholder -- INSERT TIMELINE GRAPHIC}
+    Visual timeline showing: Full $\to$ Diff $\to$ Incremental/Log $\to$ Crash $\to$ Restore point
+  \end{alertblock}
 \end{frame}
 
 \begin{frame}{Transaction Logs: Before- and After-Images}
-  To support both rollback and crash recovery, every database engine maintains detailed change logs
-  for every transaction.
+  Every database engine maintains detailed change logs for every transaction
+  to support both \texttt{ROLLBACK} and crash recovery.
 
-  \medskip
-  \begin{block}{Before-Image}
-    The state of a data record \textbf{before} the modification. Created at the start of a
-    transaction (before any change is applied). Used for \texttt{ROLLBACK} -- if the transaction
-    must be undone, the before-image is used to restore the original data.
-    Kept in the log until the transaction either commits or rolls back.
+  \begin{block}{Before-Image (UNDO log)}
+    The state of a record \textbf{before} modification. Written to the log at
+    transaction start. Used for \texttt{ROLLBACK} -- restores original data if
+    the transaction is aborted.
   \end{block}
 
-  \begin{block}{After-Image}
-    The state of a data record \textbf{after} the modification. Created when the change is applied
-    to the in-memory cache. Used for \textbf{REDO} / crash recovery -- if the system crashes after
-    a commit but before the data was flushed to disk, the after-image allows the change to be
-    replayed. Kept until the data has been physically written to disk (at a \emph{checkpoint}).
+  \begin{block}{After-Image (REDO log)}
+    The state of a record \textbf{after} modification. Written when the change
+    is applied in memory. Used for crash recovery -- if the system crashes after
+    \texttt{COMMIT} but before data is flushed to disk, the after-image replays
+    the change.
   \end{block}
 
-  \medskip
-  \textbf{Important:} data modifications are first written to a \textbf{database cache} (RAM buffer)
-  for performance. They are written to physical disk asynchronously during a \emph{checkpoint}.
-  If the system crashes between the commit and the next checkpoint, the transaction log (after-image)
-  is used to redo the committed work.
+  \begin{alertblock}{Why both are needed}
+    Data changes go to the \textbf{buffer cache} (RAM) first for performance.
+    Asynchronous writes to disk happen at \emph{checkpoints}.
+    A crash between COMMIT and checkpoint = lost write. After-image fixes this.
+    An aborted transaction in RAM = dirty data. Before-image undoes it.
+  \end{alertblock}
 \end{frame}
 
 \begin{frame}{Transaction Lifecycle with Before- and After-Images}
@@ -139,34 +158,58 @@
   \end{block}
 \end{frame}
 
-\begin{frame}{RAID -- Redundant Array of Independent Disks (!)}
-  \begin{block}{Definition (!)}
-    \textbf{RAID} combines multiple physical hard drives into a single logical storage unit, providing
-    a combination of improved performance (through parallelism) and/or fault tolerance (through
-    redundancy), depending on the RAID level chosen.
+\begin{frame}{RAID -- Redundant Array of Independent Disks}
+  \begin{block}{What Is RAID?}
+    \textbf{RAID} combines multiple physical hard drives into a single logical
+    storage unit, providing improved \textbf{performance} (via parallelism)
+    and/or \textbf{fault tolerance} (via redundancy).
   \end{block}
 
-  \begin{itemize}
-    \item Can be implemented in \textbf{hardware} (dedicated RAID controller card with its own CPU
-          and cache) or in \textbf{software} (the operating system manages RAID in firmware or kernel
-          drivers). Hardware RAID is faster and more reliable.
-    \item \textbf{Three fundamental techniques} used in different combinations by each RAID level:
-      \begin{itemize}
-        \item \textbf{Striping}: data is split into blocks and written across multiple disks in
-              parallel. Increases throughput -- both reading and writing happen simultaneously on
-              several disks.
-        \item \textbf{Mirroring}: an exact, real-time copy of all data is maintained on a second
-              (or more) disk. If one disk fails, the mirror takes over immediately.
-        \item \textbf{Parity}: a mathematical checksum of the data is stored alongside it. If one
-              disk fails, its content can be \emph{reconstructed} from the remaining data and the
-              parity information -- without needing a full mirror copy.
-      \end{itemize}
-    \item There is always a \textbf{trade-off} between performance, redundancy, and storage
-          efficiency. No RAID level maximises all three simultaneously.
-  \end{itemize}
+  \begin{block}{Three Fundamental Techniques}
+    \begin{itemize}
+      \item \textbf{Striping}: data split into blocks, written across disks in parallel.
+            Increases read/write throughput.
+      \item \textbf{Mirroring}: exact copy maintained on a second disk.
+            Instant failover if one disk fails.
+      \item \textbf{Parity}: mathematical checksum stored alongside data.
+            Allows reconstruction of a failed disk without a full mirror.
+    \end{itemize}
+  \end{block}
+
+  \begin{alertblock}{No Silver Bullet}
+    There is always a trade-off between performance, redundancy, and storage
+    efficiency. No single RAID level maximises all three.
+  \end{alertblock}
 \end{frame}
 
-\begin{frame}{RAID 0 -- Striping (!)}
+\begin{frame}{RAID Level Comparison}
+  \begin{center}
+  \renewcommand{\arraystretch}{1.3}
+  \small
+  \begin{tabular}{@{}lllll@{}}
+    \toprule
+    \textbf{Level} & \textbf{Techniques} & \textbf{Min Disks} & \textbf{Storage Eff.} & \textbf{Fault Tolerance} \\
+    \midrule
+    \textbf{RAID 0} & Striping only     & 2 & 100\% & None (0 failures) \\
+    \textbf{RAID 1} & Mirroring only    & 2 & 50\%  & 1 disk failure \\
+    \textbf{RAID 5} & Stripe + Parity   & 3 & $(n-1)/n$ & 1 disk failure \\
+    \textbf{RAID 6} & Stripe + 2 Parity & 4 & $(n-2)/n$ & 2 disk failures \\
+    \textbf{RAID 10}& Mirror + Stripe   & 4 & 50\%  & 1 per mirrored pair \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+
+  \begin{block}{Quick Guide for Databases}
+    \begin{itemize}
+      \item \textbf{RAID 0}: never for databases (zero redundancy)
+      \item \textbf{RAID 1}: OS drives, small critical databases
+      \item \textbf{RAID 5}: most common for NAS/SAN storage arrays
+      \item \textbf{RAID 10}: high-performance database servers (best of RAID 1+0)
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}{RAID 0 -- Striping}
   \begin{columns}
     \begin{column}{0.65\textwidth}
       \textbf{How it works:} data is split into equal-sized blocks (\emph{stripes}) and written
@@ -206,7 +249,7 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}{RAID 1 -- Mirroring (!)}
+\begin{frame}{RAID 1 -- Mirroring}
   \begin{columns}
     \begin{column}{0.65\textwidth}
       \textbf{How it works:} every write operation is duplicated to two (or more) disks
@@ -247,7 +290,7 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}{RAID 5 -- Striping with Distributed Parity (!)}
+\begin{frame}{RAID 5 -- Striping with Distributed Parity}
   \textbf{How it works:} data is striped across $n \geq 3$ disks. For each stripe, a \emph{parity
   block} is computed and stored on one of the disks (the parity location rotates across disks so no
   single disk becomes the bottleneck).

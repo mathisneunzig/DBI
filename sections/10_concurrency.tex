@@ -2,115 +2,155 @@
 
 \begin{frame}{What is Concurrency?}
   \begin{block}{Definition}
-    \textbf{Concurrency} in the context of databases refers to the ability of multiple users or
-    processes to access and modify the same database data \textbf{simultaneously}, without
-    compromising data integrity or consistency.
+    \textbf{Concurrency} is the ability of multiple users or processes to access
+    and modify the same database data \textbf{simultaneously}, without compromising
+    data integrity or consistency.
   \end{block}
 
-  \medskip
-  In any real production system -- an online shop, a banking application, an ERP -- hundreds or
-  thousands of transactions may be executing at the exact same moment. This is not an edge case;
-  it is the normal operating mode.
+  In any real production system -- online shop, banking app, ERP -- hundreds or
+  thousands of transactions execute at the same moment. This is the \emph{normal}
+  operating mode, not an edge case.
 
-  \medskip
-  Without proper concurrency control, the following problems arise:
-  \begin{itemize}
-    \item Users overwrite each other's changes (\emph{lost update}).
-    \item A user reads data that is about to be rolled back (\emph{dirty read}).
-    \item A user reads the same data twice and gets different results (\emph{non-repeatable read}).
-    \item A query sees a different set of rows on two successive executions (\emph{phantom read}).
-  \end{itemize}
+  \begin{block}{Four Concurrency Problems}
+    \begin{tabular}{@{}ll@{}}
+      \toprule
+      \textbf{Problem} & \textbf{What happens} \\
+      \midrule
+      Lost Update          & One transaction's write overwrites another's \\
+      Dirty Read           & Reading uncommitted data that is later rolled back \\
+      Non-Repeatable Read  & Same read gives different values within one transaction \\
+      Phantom Read         & A repeated query returns a different set of rows \\
+      \bottomrule
+    \end{tabular}
+  \end{block}
 
-  \medskip
-  \textbf{Concurrency control} is one of the core responsibilities of any DBMS. The goal is to
-  allow maximum parallelism while guaranteeing that the result is always equivalent to some
-  \emph{serial} (one-at-a-time) execution of those same transactions -- a property called
-  \textbf{serializability}.
+  \begin{block}{Goal: Serializability}
+    The result of concurrent execution must be equivalent to \emph{some} serial
+    (one-at-a-time) execution of the same transactions.
+  \end{block}
 \end{frame}
 
-\begin{frame}{Problem 1: Lost Update}
-  \textbf{Scenario:} two users simultaneously update the unit price of the same product.
+\begin{frame}[fragile]{Problem 1: Lost Update}
+  \textbf{Scenario:} two users simultaneously update the price of the same track.
 
   \medskip
   \begin{tabular}{@{}p{3.8cm}p{3.8cm}p{3.5cm}@{}}
     \toprule
-    \textbf{User A} & \textbf{User B} & \textbf{What happens?} \\
+    \textbf{Transaction A} & \textbf{Transaction B} & \textbf{What happens?} \\
     \midrule
-    Read price (= 10.00) & & \\
-    & Read price (= 10.00) & Both see old value \\
-    Compute 10.00 + 2.00 & & \\
-    & Compute 10.00 $-$ 1.00 & \\
-    Write price = 12.00 & & A commits first \\
-    COMMIT & & \\
-    & Write price = 9.00 & B overwrites A! \\
-    & COMMIT & A's change is LOST \\
+    \texttt{SELECT price} (= 9.99) & & \\
+    & \texttt{SELECT price} (= 9.99) & Both see old value \\
+    Compute 9.99 + 2.00 & & \\
+    & Compute 9.99 $-$ 1.00 & \\
+    \texttt{UPDATE price = 11.99} & & A commits first \\
+    \texttt{COMMIT} & & \\
+    & \texttt{UPDATE price = 8.99} & \textbf{B overwrites A!} \\
+    & \texttt{COMMIT} & \textbf{A's change is LOST} \\
     \bottomrule
   \end{tabular}
 
-  \medskip
   \begin{alertblock}{Result}
-    Both users read the same original value (10.00), calculated their own updates independently,
-    and the \emph{last writer wins}. User A's increase to 12.00 is completely overwritten and
-    lost. The final price is 9.00 instead of the logically correct 11.00 (or 8.00, depending on
-    which update was intended to be the ``final'' one).
+    Correct result should be 10.99 (both applied). Actual result: 8.99.
+    A's +2.00 update is \textbf{completely lost}.
   \end{alertblock}
+
+  \begin{block}{SQL Scenario}
+\begin{lstlisting}[style=sqlstyle]
+-- Both sessions run this simultaneously on TrackID = 4
+BEGIN;
+  SELECT price FROM Track WHERE TrackID = 4;  -- both see 9.99
+  UPDATE Track SET price = price + 2.00       -- A: 11.99
+  -- or:                   price = price - 1  -- B: 8.99
+COMMIT;
+-- B's COMMIT runs after A's => B wins, A's change is gone
+\end{lstlisting}
+  \end{block}
 \end{frame}
 
-\begin{frame}{Problem 2: Dirty Read (Uncommitted Dependency)}
-  \textbf{Scenario:} an ATM reads an account balance that is subsequently rolled back.
+\begin{frame}[fragile]{Problem 2: Dirty Read (Uncommitted Dependency)}
+  \textbf{Scenario:} Transaction A reads data from Transaction B before B commits.
 
   \medskip
   \begin{tabular}{@{}p{3.5cm}p{4cm}p{3.2cm}@{}}
     \toprule
-    \textbf{ATM} & \textbf{Bank Server} & \textbf{What happens?} \\
+    \textbf{Transaction A (ATM)} & \textbf{Transaction B (Transfer)} & \textbf{Event} \\
     \midrule
-    & BEGIN: incoming transfer of \EUR{500} & \\
-    & Balance: 300 + 500 = 800 (in cache) & \\
-    Read balance = 800 & & Reads \emph{dirty} data \\
-    COMMIT (displays \EUR{800}) & & \\
-    & ROLLBACK (transfer failed) & Balance reverts to 300 \\
-    \multicolumn{3}{l}{\textit{The ATM showed \EUR{800} but the real balance is \EUR{300}.}} \\
+    & \texttt{BEGIN} & \\
+    & Balance: 300 + 500 = 800 & In memory, not committed \\
+    \texttt{SELECT balance} = 800 & & Reads \emph{dirty} data! \\
+    Displays \EUR{800} to user & & \\
+    & \texttt{ROLLBACK} (transfer failed) & Balance reverts to 300 \\
+    \multicolumn{3}{l}{\textit{ATM showed \EUR{800} but real balance is \EUR{300}.}} \\
     \bottomrule
   \end{tabular}
 
-  \medskip
   \begin{alertblock}{Result}
-    The ATM read data from a transaction that had not yet committed -- ``dirty'' (uncommitted)
-    data. When the bank server rolls back, the ATM has already confirmed a balance that no longer
-    exists. This can lead the customer to withdraw money they do not actually have.
+    A read uncommitted data from a transaction that was later rolled back.
+    The ATM customer may attempt to withdraw money they do not actually have.
   \end{alertblock}
 
-  \medskip
-  A \textbf{dirty read} is prevented at isolation level \texttt{READ COMMITTED} or higher.
+  \begin{block}{Prevented by isolation level}
+\begin{lstlisting}[style=sqlstyle]
+-- Dirty reads are prevented at READ COMMITTED or higher
+SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+\end{lstlisting}
+  \end{block}
 \end{frame}
 
-\begin{frame}{Problem 3: Inconsistent Analysis (Non-Repeatable / Phantom Read)}
-  \textbf{Scenario:} an auditor totals three account balances while a transfer runs concurrently.\\
-  Initial state: Account\,1 = \EUR{400}, Account\,2 = \EUR{300}, Account\,3 = \EUR{700}
-  (total = \EUR{1\,400}).
+\begin{frame}[fragile]{Problem 3: Non-Repeatable Read}
+  \textbf{Scenario:} an auditor reads three account balances while a transfer runs concurrently.\\
+  Initial state: Acc\,1 = \EUR{400}, Acc\,2 = \EUR{300}, Acc\,3 = \EUR{700} (total = \EUR{1\,400}).
 
   \medskip
   \begin{tabular}{@{}p{3.5cm}p{4cm}p{3cm}@{}}
     \toprule
-    \textbf{User A (audit)} & \textbf{User B (transfer)} & \textbf{Event} \\
+    \textbf{Auditor (A)} & \textbf{Transfer (B)} & \textbf{Event} \\
     \midrule
     Read Acc\,1 = 400 & & \\
     Read Acc\,2 = 300 & & \\
     & Acc\,3: 700 $-$ 600 = 100 & Transfer begins \\
-    & Acc\,1: 400 + 600 = 1\,000 & \\
-    & COMMIT & \\
-    Read Acc\,3 = 100 & & Sees new value! \\
-    Sum = 400+300+100 = \textbf{800} & & \textbf{Wrong! Should be 1\,400} \\
+    & Acc\,1: 400 + 600 = 1000 & \\
+    & \texttt{COMMIT} & \\
+    Read Acc\,3 = 100 & & Sees committed new value! \\
+    Sum = 400+300+100 = \textbf{800} & & \textbf{Wrong! Should be 1400} \\
     \bottomrule
   \end{tabular}
 
-  \medskip
   \begin{alertblock}{Result}
-    User A read the three accounts at \emph{different points in time} and saw a snapshot that
-    never actually existed. \EUR{600} appears to have vanished. This is the
-    \textbf{inconsistent analysis} problem -- also called a \emph{phantom read}. It is prevented
-    at isolation level \texttt{REPEATABLE READ} or \texttt{SERIALIZABLE}.
+    Auditor A read accounts at different points in time and saw a snapshot that
+    never actually existed -- \EUR{600} appears to have vanished.
   \end{alertblock}
+
+  \begin{block}{Prevented by isolation level}
+\begin{lstlisting}[style=sqlstyle]
+-- Prevented at REPEATABLE READ or SERIALIZABLE
+SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+\end{lstlisting}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Transaction Isolation Levels}
+  SQL defines four isolation levels that trade off correctness vs.\ concurrency:
+
+  \begin{center}
+  \renewcommand{\arraystretch}{1.3}
+  \small
+  \begin{tabular}{@{}lcccc@{}}
+    \toprule
+    \textbf{Isolation Level} & \textbf{Dirty Read} & \textbf{Non-Rep. Read} & \textbf{Phantom Read} \\
+    \midrule
+    \texttt{READ UNCOMMITTED} & Possible & Possible & Possible \\
+    \texttt{READ COMMITTED}   & \textcolor{green!60!black}{Prevented} & Possible & Possible \\
+    \texttt{REPEATABLE READ}  & \textcolor{green!60!black}{Prevented} & \textcolor{green!60!black}{Prevented} & Possible \\
+    \texttt{SERIALIZABLE}     & \textcolor{green!60!black}{Prevented} & \textcolor{green!60!black}{Prevented} & \textcolor{green!60!black}{Prevented} \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+
+  \begin{block}{MySQL Defaults}
+    MySQL InnoDB default: \textbf{REPEATABLE READ} (with snapshot isolation, preventing most phantoms too).\\
+    Most application frameworks use \textbf{READ COMMITTED} for better throughput.
+  \end{block}
 \end{frame}
 
 \begin{frame}{Concurrency Control Strategies}
@@ -203,31 +243,36 @@
   \end{examples}
 \end{frame}
 
-\begin{frame}{Deadlocks}
+\begin{frame}[fragile]{Deadlocks}
   \begin{alertblock}{Definition}
-    A \textbf{deadlock} occurs when two or more transactions are each waiting for the other to
-    release a lock -- creating a circular dependency from which no transaction can escape on its own.
+    A \textbf{deadlock} occurs when two transactions are each waiting for the
+    other to release a lock -- a circular dependency neither can escape alone.
   \end{alertblock}
 
-  \medskip
-  \textbf{Classic two-transaction deadlock:}
-  \begin{itemize}
-    \item Transaction A holds an X-lock on Row 1, now requests a lock on Row 2.
-    \item Transaction B holds an X-lock on Row 2, now requests a lock on Row 1.
-    \item A is waiting for B; B is waiting for A. Neither can proceed. Ever.
-  \end{itemize}
+  \begin{block}{Classic SQL Deadlock Example}
+\begin{lstlisting}[style=sqlstyle]
+-- Session A                      -- Session B
+BEGIN;                             BEGIN;
+UPDATE Track                       UPDATE Track
+  SET Duration = 300                 SET Duration = 400
+  WHERE TrackID = 1;                 WHERE TrackID = 2;  -- OK
+                                   UPDATE Track
+UPDATE Track                         SET Duration = 500
+  SET Duration = 350                 WHERE TrackID = 1;  -- WAITS for A
+  WHERE TrackID = 2; -- WAITS for B
+-- DEADLOCK: A waits for B, B waits for A
+-- MySQL detects the cycle and kills one transaction (ERROR 1213)
+\end{lstlisting}
+  \end{block}
 
-  \medskip
-  \textbf{Detection and resolution -- two main approaches:}
-  \begin{itemize}
-    \item \textbf{Deadlock detection}: the DBMS maintains a ``waits-for'' graph (nodes are
-          transactions, edges are ``is waiting for''). Periodically check for \emph{cycles} in this
-          graph. When a cycle is found, one transaction (the \emph{victim}) is aborted and retried;
-          the others can then proceed. MySQL InnoDB and PostgreSQL use this approach.
-    \item \textbf{Deadlock prevention}: enforce a global ordering on resources and require all
-          transactions to acquire locks in that fixed order. If transaction A always locks Row 1
-          before Row 2, and B does the same, no circular wait can form. Alternatively, use
-          timestamps: the older (higher-priority) transaction waits; the younger one is aborted
-          (``wound-wait'' or ``wait-die'' schemes).
-  \end{itemize}
+  \begin{block}{Resolution Strategies}
+    \begin{itemize}
+      \item \textbf{Detection}: DBMS builds a ``waits-for'' graph; when a
+            cycle is found, one transaction (the \emph{victim}) is aborted
+            and retried. Used by MySQL InnoDB and PostgreSQL.
+      \item \textbf{Prevention}: always acquire locks in the \emph{same
+            order} across all transactions. No cycle can form if all
+            sessions lock TrackID 1 before TrackID 2.
+    \end{itemize}
+  \end{block}
 \end{frame}

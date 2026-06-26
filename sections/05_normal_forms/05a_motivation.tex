@@ -1,85 +1,95 @@
 \section{Normal Forms}
 
 % ---------------------------------------------------------------------------
-\begin{frame}{Why Normal Forms?}
-  \begin{alertblock}{The Problem: Poorly Designed Relations}
-    A na\"ively designed table that stores ``everything in one place'' leads to a
-    range of systematic problems collectively called \textbf{anomalies}.
+\begin{frame}{Why Normal Forms? -- The Problem}
+  \begin{alertblock}{Starting Point: A ``Naive'' Table}
+    A table that stores everything in one place leads to systematic problems.
   \end{alertblock}
 
-  \begin{itemize}
-    \item \textbf{Data Redundancy:} The same fact (e.g.\ an artist's debut year)
-          is stored in every row that mentions that artist.  This wastes storage
-          and, more importantly, opens the door to inconsistency.
-    \item \textbf{Update Anomalies:} If a fact is stored in $n$ places and we
-          update only $k < n$ of them, the database becomes contradictory.
-    \item \textbf{Insertion Anomalies:} We cannot record a new fact without also
-          supplying unrelated data.  Example: we cannot add a new artist until
-          that artist releases an album.
-    \item \textbf{Deletion Anomalies:} Deleting a record accidentally removes
-          other unrelated facts.  Example: deleting the last album of an artist
-          also deletes all information about that artist.
-    \item \textbf{Complex Queries:} Denormalised tables often require intricate
-          SQL (self-joins, aggregations, deduplication) just to produce correct
-          results for simple questions.
-  \end{itemize}
+  \vspace{0.4em}
+  \scriptsize
+  \begin{tabular}{llllllll}
+    \toprule
+    \textbf{ID} & \textbf{Title} & \textbf{Songs} & \textbf{Artist} & \textbf{Debut} & \textbf{Genre} & \textbf{Rel.} \\
+    \midrule
+    A100 & Midnights & Would've...; Karma & Taylor Swift & 2006 & Pop & 2022 \\
+    A101 & 1989 (TV) & Shake It Off; Blank Space & Taylor Swift & 2006 & Pop & 2023 \\
+    A102 & SOS & Anti-Hero; Die For You & SZA & 2012 & R\&B & 2022 \\
+    \bottomrule
+  \end{tabular}
+  \normalsize
 
-  \begin{block}{A Problematic Table}
-    \small
-    \begin{tabular}{lllllll}
-      \hline
-      \textbf{ID} & \textbf{Title} & \textbf{Songs} & \textbf{Main Artist} & \textbf{Debut} & \textbf{Genre} & \textbf{Release} \\
-      \hline
-      A100 & Midnights (3am Ed.) & Would've\ldots; Karma & Taylor Swift & 2006 & Pop & 2022 \\
-      A101 & 1989 (Taylor's Ver.) & Shake It Off; Blank Space & Taylor Swift & 2006 & Pop & 2023 \\
-      \hline
-    \end{tabular}
-    \vspace{4pt}
-
-    Two immediate violations: (1) multiple songs are packed into a single cell
-    (\emph{atomicity violated}); (2) \texttt{Debut} repeats for every album of
-    the same artist (\emph{redundancy}).
+  \vspace{0.5em}
+  \begin{block}{Spot the Problems}
+    \begin{itemize}
+      \item \textbf{Songs column} contains multiple values in one cell -- not atomic!
+      \item \textbf{Debut year} 2006 appears twice for Taylor Swift -- redundancy!
+      \item If Taylor Swift changes her name, we must update \emph{every} row.
+    \end{itemize}
   \end{block}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{The Four Anomalies}
+  \begin{block}{Update Anomaly}
+    If Taylor Swift's debut year is stored in $n$ rows and we update only $k < n$,
+    the database becomes \textbf{inconsistent} -- some rows say 2006, others say 2004.
+  \end{block}
+
+  \begin{block}{Insertion Anomaly}
+    We \textbf{cannot record a new artist} unless they have already released an album.
+    The schema forces us to have album data before artist data can be stored.
+  \end{block}
+
+  \begin{block}{Deletion Anomaly}
+    If we delete SZA's only album (A102), we \textbf{lose all information about SZA}
+    as well -- artist data exists only inside the album rows.
+  \end{block}
+
+  \begin{alertblock}{Root Cause}
+    All anomalies stem from storing \textbf{multiple independent facts} in the same
+    relation without separating their concerns.
+  \end{alertblock}
 \end{frame}
 
 % ---------------------------------------------------------------------------
 \begin{frame}{The Solution: Normal Forms}
   \begin{block}{What Are Normal Forms?}
-    \textbf{Normal forms (NF)} are a series of progressive rules for organising
-    relation schemas.  Each rule eliminates a specific class of redundancy or
-    dependency problem.
+    \textbf{Normal forms (NF)} are a series of progressive design rules.
+    Each rule eliminates a specific class of redundancy or dependency problem.
+  \end{block}
+
+  \begin{block}{Key Properties}
+    \begin{itemize}
+      \item Normal forms are \textbf{cumulative}: a relation in $n$NF must also
+            satisfy all lower normal forms -- there is no skipping.
+      \item Each step decomposes relations into smaller, cleaner ones.
+      \item The decomposition must be \textbf{lossless} (no information destroyed).
+    \end{itemize}
   \end{block}
 
   \begin{columns}[t]
     \begin{column}{0.48\textwidth}
-      \textbf{Goal}
+      \textbf{Normal Form Hierarchy}
       \begin{itemize}
-        \item Reduce redundancy and unnecessary attribute dependencies
-        \item Eliminate update, insertion, and deletion anomalies
-        \item Produce a clean, maintainable schema
+        \item \textbf{1NF} -- atomic values
+        \item \textbf{2NF} -- no partial FDs
+        \item \textbf{3NF} -- no transitive FDs
+        \item \textbf{BCNF} -- every determinant is a superkey
+        \item \textbf{4NF} -- no multivalued FDs
+        \item \textbf{5NF} -- no join dependencies
       \end{itemize}
-
-      \vspace{6pt}
-      \textbf{Key Insight}\\
-      Normal forms are \emph{cumulative}: a relation in $n$NF must also satisfy
-      all lower normal forms.  There is no skipping.
     \end{column}
     \begin{column}{0.48\textwidth}
-      \textbf{Hierarchy of Normal Forms}
-      \begin{itemize}
-        \item Commonly used: 1NF, 2NF, 3NF, BCNF
-        \item Less common: 4NF, 5NF
-        \item Rarely used: 6NF, EKNF, ETNF, DKNF
-      \end{itemize}
-
-      \vspace{6pt}
       \textbf{Two Key Algorithms}
       \begin{itemize}
-        \item \textbf{Synthesis Algorithm} $\to$ 3NF\\
-              (lossless \emph{and} dependency-preserving)
-        \item \textbf{Decomposition Algorithm} $\to$ BCNF\\
-              (lossless, but may not preserve all FDs)
+        \item \textbf{Synthesis} $\to$ 3NF\\
+              lossless + dependency-preserving
+        \item \textbf{Decomposition} $\to$ BCNF\\
+              lossless, may lose some FDs
       \end{itemize}
+      \vspace{0.5em}
+      \textbf{In practice:} Most production databases are designed to \textbf{3NF} or \textbf{BCNF}.
     \end{column}
   \end{columns}
 \end{frame}

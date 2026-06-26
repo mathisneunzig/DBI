@@ -1,41 +1,66 @@
 % ------------------------------------------------------------
-\begin{frame}[fragile]
-  \frametitle{Docker -- Running MySQL Without XAMPP}
-
+\begin{frame}{Docker -- Running MySQL Without XAMPP}
   \begin{block}{What Is Docker?}
     \textbf{Docker} packages an application and all its dependencies into a
     self-contained unit called a \textbf{container}. A container runs identically
     on any machine -- no ``it works on my laptop'' problems.\\[0.3em]
-    For databases, Docker means: spin up a MySQL server in \emph{one command},
-    destroy it just as easily, and run multiple versions side by side.
+    For databases: spin up a MySQL server in \emph{one command}, destroy it just
+    as easily, and run multiple database versions side by side.
   \end{block}
 
-  \begin{block}{Starting a MySQL container}
+  \begin{block}{Key Concepts}
+    \begin{tabular}{@{}ll@{}}
+      \textbf{Image}   & Blueprint -- the recipe for a container \\
+      \textbf{Container} & Running instance of an image \\
+      \textbf{Volume}  & Persistent storage that survives container restarts \\
+      \textbf{Port mapping} & \texttt{-p host:container} exposes the container port \\
+    \end{tabular}
+  \end{block}
+
+  \begin{alertblock}{Why Docker for database courses?}
+    Clean, reproducible environment. Every student runs the exact same MySQL
+    version. No conflicts with existing software. Destroy and recreate in seconds.
+  \end{alertblock}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}[fragile]{Docker -- Starting a MySQL Container}
+  \begin{block}{One-Line Setup}
 \begin{lstlisting}[style=sqlstyle, language=bash]
 # Pull the official MySQL image and start a container
 docker run --name my-mysql \
   -e MYSQL_ROOT_PASSWORD=secret \
-  -e MYSQL_DATABASE=supermarket \
+  -e MYSQL_DATABASE=music \
   -p 3306:3306 \
   -d mysql:8.0
+\end{lstlisting}
+  \end{block}
 
-# Connect with the MySQL CLI inside the container
+  \begin{block}{Useful Commands}
+\begin{lstlisting}[style=sqlstyle, language=bash]
+# Connect with the MySQL CLI inside the running container
 docker exec -it my-mysql mysql -u root -psecret
 
-# Stop and remove the container when done
+# Stop the container (data preserved in volume)
+docker stop my-mysql
+
+# Completely remove the container
 docker stop my-mysql && docker rm my-mysql
 \end{lstlisting}
   \end{block}
+
+  \begin{examples}{Connect from DBeaver}
+    Use \texttt{localhost:3306}, username \texttt{root}, password \texttt{secret}.
+    Exactly the same as connecting to XAMPP.
+  \end{examples}
 \end{frame}
 
 % ------------------------------------------------------------
-\begin{frame}[fragile]
-  \frametitle{Docker Compose -- Multi-Container Setup}
+\begin{frame}[fragile]{Docker Compose -- Multi-Container Setup}
+  Real projects need both a database \emph{and} an application server.
+  \textbf{Docker Compose} describes the entire stack in one YAML file.
 
-  Real projects often need both a database \emph{and} an application server.
-  \textbf{Docker Compose} describes the entire stack in a single YAML file.
-
-  \begin{block}{docker-compose.yml example}
+  \begin{block}{docker-compose.yml}
 \begin{lstlisting}[style=sqlstyle]
 version: "3.9"
 services:
@@ -43,11 +68,11 @@ services:
     image: mysql:8.0
     environment:
       MYSQL_ROOT_PASSWORD: secret
-      MYSQL_DATABASE: supermarket
+      MYSQL_DATABASE: music
     ports:
       - "3306:3306"
     volumes:
-      - db_data:/var/lib/mysql   # persist data across restarts
+      - db_data:/var/lib/mysql  # data persists on restart
 
   adminer:
     image: adminer              # lightweight phpMyAdmin alternative
@@ -60,37 +85,34 @@ volumes:
   \end{block}
 
   \begin{examples}{Usage}
-    \texttt{docker compose up -d} starts all services.
-    \texttt{docker compose down} stops them.
-    Connect DBeaver to \texttt{localhost:3306} as usual.
+    \texttt{docker compose up -d} -- starts all services.
+    \texttt{docker compose down} -- stops them.
   \end{examples}
 \end{frame}
 
 % ------------------------------------------------------------
-\begin{frame}
-  \frametitle{Tool Comparison}
-
+\begin{frame}{Tool Comparison -- Summary}
   \begin{center}
   \renewcommand{\arraystretch}{1.3}
   \small
   \begin{tabular}{@{}lllll@{}}
     \toprule
-    \textbf{Tool}      & \textbf{Type}      & \textbf{DB Support} & \textbf{Best For} \\
+    \textbf{Tool}      & \textbf{Type}       & \textbf{DB Support}   & \textbf{Best For} \\
     \midrule
-    XAMPP              & Local server bundle & MySQL/MariaDB       & Quick local setup \\
-    phpMyAdmin         & Browser GUI         & MySQL/MariaDB       & Simple admin tasks \\
-    MySQL Workbench    & Desktop GUI         & MySQL only          & ERM design, DDL \\
-    DBeaver            & Desktop GUI         & Any (via JDBC)      & Daily SQL work \\
-    Docker             & Container runtime   & Any image           & Reproducible envs \\
+    XAMPP              & Local server bundle & MySQL / MariaDB       & Quick local setup \\
+    phpMyAdmin         & Browser GUI         & MySQL / MariaDB       & Admin, import/export \\
+    MySQL Workbench    & Desktop GUI         & MySQL only            & ERM design, DDL gen. \\
+    DBeaver            & Desktop GUI         & Any (via JDBC)        & Daily SQL work \\
+    Docker             & Container runtime   & Any image             & Reproducible envs \\
     \bottomrule
   \end{tabular}
   \end{center}
 
-  \begin{block}{Recommendation for this course}
+  \begin{block}{Recommendation for This Course}
     \begin{itemize}
-      \item \textbf{Database server}: XAMPP (Windows/macOS) or Docker (any OS)
-      \item \textbf{Schema design}: MySQL Workbench (ERM forward-engineering)
-      \item \textbf{Daily SQL queries}: DBeaver
+      \item \textbf{Database server}: XAMPP (Windows/macOS) \textit{or} Docker (any OS)
+      \item \textbf{Schema design}: MySQL Workbench (ERM $\to$ DDL forward engineering)
+      \item \textbf{Daily SQL queries \& exercises}: DBeaver
     \end{itemize}
   \end{block}
 \end{frame}

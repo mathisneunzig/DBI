@@ -1,176 +1,263 @@
 % ---------------------------------------------------------------------------
-\begin{frame}{Algorithms for Normal Forms}
+\begin{frame}{Algorithms for Normalisation --- Overview}
   \begin{block}{Why Use Algorithms?}
-    Manually decomposing large relations is error-prone and may miss violations
-    or produce redundant tables.  Two systematic algorithms provide guarantees.
+    Manually decomposing large relations is error-prone.  Two systematic
+    algorithms provide formal guarantees.
   \end{block}
 
-  \begin{columns}[t]
-    \begin{column}{0.48\textwidth}
-      \textbf{Synthesis Algorithm $\to$ 3NF}
-      \begin{itemize}
-        \item Produces a \textbf{lossless} decomposition
-        \item Also \textbf{dependency-preserving} (all original FDs are
-              representable in the result)
-        \item Preferred when preserving all FDs matters
-      \end{itemize}
-    \end{column}
-    \begin{column}{0.48\textwidth}
-      \textbf{Decomposition Algorithm $\to$ BCNF}
-      \begin{itemize}
-        \item Produces a \textbf{lossless} decomposition
-        \item \textbf{May not preserve} all functional dependencies
-        \item Preferred when the schema must be in BCNF and FD loss is
-              acceptable
-      \end{itemize}
-    \end{column}
-  \end{columns}
+  \begin{center}
+    \small
+    \begin{tabular}{lll}
+      \toprule
+      & \textbf{Synthesis Algorithm} & \textbf{Decomposition Algorithm} \\
+      \midrule
+      Target NF         & \textbf{3NF}      & \textbf{BCNF} \\
+      Lossless?         & Yes               & Yes \\
+      Dependency-pres.? & Yes               & Not guaranteed \\
+      When to use       & Almost always     & BCNF required, FD loss OK \\
+      \bottomrule
+    \end{tabular}
+  \end{center}
 
-  \vspace{8pt}
-  \begin{block}{Prerequisite: Canonical Cover}
+  \vspace{0.6em}
+  \begin{block}{Prerequisite: Canonical Cover $F_c$}
     Both algorithms require the \textbf{Canonical Cover} $F_c$ as input --- a
-    minimal, equivalent, redundancy-free representation of the FD set $F$.
+    minimal, equivalent, redundancy-free set of FDs.
+    Computing $F_c$ is always the first step.
+  \end{block}
+
+  \begin{block}{Useful Tool}
+    \textbf{DB Normalizer} (TU Munich):
+    \texttt{normalizer.db.in.tum.de} --- verifies canonical covers and
+    decompositions automatically (German interface).
+  \end{block}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{Canonical Cover --- Definition}
+  \begin{block}{Definition}
+    The \textbf{canonical cover} $F_c$ of a set of FDs $F$ is a
+    \textbf{minimal equivalent} set:
+    \begin{itemize}
+      \item $F_c$ and $F$ produce exactly the same attribute closures
+      \item No FD in $F_c$ has a redundant attribute on the \textbf{left side}
+      \item No attribute on the \textbf{right side} of any FD in $F_c$ is
+            redundant (cannot be derived from the remaining FDs)
+      \item No FD in $F_c$ is empty ($A \to \emptyset$)
+      \item FDs with the same left side are merged: $A \to B$ and $A \to C$
+            become $A \to BC$
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Why It Matters}
+    Using $F_c$ instead of $F$ guarantees that the Synthesis Algorithm produces
+    the \emph{minimum number} of tables --- no redundant relations.
+  \end{block}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{Canonical Cover --- Four Steps}
+  \begin{enumerate}
+    \item \textbf{Reduce Left Sides:}
+          For each FD $AB \to C$, check if $A \to C$ or $B \to C$ alone holds
+          using the remaining FDs.  If yes, remove the redundant attribute from
+          the left side.  Repeat until stable.
+
+    \vspace{4pt}
+    \item \textbf{Reduce Right Sides:}
+          For each FD $A \to BC$, check whether $A \to C$ can be derived
+          without using $A \to C$ directly.  If yes, remove $C$ from the right
+          side.
+
+    \vspace{4pt}
+    \item \textbf{Delete Empty FDs:}
+          Remove any FD of the form $A \to \emptyset$ (arises when the right
+          side was fully eliminated in step 2).
+
+    \vspace{4pt}
+    \item \textbf{Merge FDs with Identical Left Side:}
+          Combine $A \to B$ and $A \to C$ into $A \to BC$.
+  \end{enumerate}
+
+  \vspace{4pt}
+  \begin{alertblock}{Note}
+    The order of steps 1 and 2 may vary by textbook; the final result is
+    equivalent regardless.
+  \end{alertblock}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{Canonical Cover --- Worked Example (Setup)}
+  \begin{block}{Variables}
+    A = City, \; B = Country, \; C = Full Station Name,
+    D = State, \; E = Train Station
+  \end{block}
+
+  \begin{block}{Initial FD Set $F$}
+    $F = \{ABE \to C, \quad E \to AC, \quad E \to A, \quad A \to BD\}$
+    \hfill Candidate key: $E$
+  \end{block}
+
+  \begin{block}{Step 1 --- Reduce Left Sides}
+    We have $A \to BD$ and $E \to A$, so $E \to B$ transitively.\\
+    Therefore $B$ is redundant in $ABE \to C$: reduce to $E \to C$.\\[4pt]
+    Result after step 1: \quad
+    $\{E \to C, \quad E \to AC, \quad E \to A, \quad A \to BD\}$
+  \end{block}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{Canonical Cover --- Worked Example (Steps 2--4)}
+  Working with: $\{E \to C, \quad E \to AC, \quad E \to A, \quad A \to BD\}$
+
+  \vspace{6pt}
+  \begin{block}{Step 2 --- Reduce Right Sides}
+    In $E \to AC$: $E \to A$ already exists, so $A$ is redundant on the right.
+    Reduce $E \to AC$ to $E \to C$.
+    But $E \to C$ already exists --- so $E \to AC$ becomes $E \to \emptyset$.\\[4pt]
+    Result: \quad $\{E \to \emptyset, \quad E \to C, \quad E \to A, \quad A \to BD\}$
   \end{block}
 
   \vspace{4pt}
-  \begin{examples}{Useful Tool}
-    \textbf{DB Normalizer} by TU Munich:
-    \texttt{normalizer.db.in.tum.de} (German interface) --- verifies canonical
-    covers and normal form decompositions automatically.
-  \end{examples}
-\end{frame}
-
-% ---------------------------------------------------------------------------
-\begin{frame}{Canonical Cover}
-  \begin{block}{Definition}
-    The \textbf{canonical cover} $F_c$ of a set of FDs $F$ is a
-    \textbf{minimal equivalent} set of FDs: it preserves exactly the same
-    dependencies as $F$ but contains no redundancy on either side of any FD.
+  \begin{block}{Step 3 --- Delete Empty FDs}
+    Remove $E \to \emptyset$.\\[4pt]
+    Result: \quad $\{E \to C, \quad E \to A, \quad A \to BD\}$
   \end{block}
 
-  \textbf{Four Steps to Compute $F_c$:}
-
-  \begin{enumerate}
-    \item \textbf{Reduce Left Sides:} For each FD $AB \to C$, check if
-          $A \to C$ or $B \to C$ alone.  If yes, remove the redundant
-          attribute from the left side.  Repeat until no further reduction is
-          possible.
-    \item \textbf{Reduce Right Sides:} For each FD $A \to BC$, check whether
-          $A \to C$ can be derived without using $A \to C$ directly (i.e.\
-          using the remaining FDs).  If yes, remove $C$ from the right side.
-    \item \textbf{Delete Empty FDs:} Remove any FD of the form
-          $A \to \emptyset$ (arises when the right side was fully eliminated in
-          step 2).
-    \item \textbf{Join FDs with Identical Left Side:} Merge $A \to B$ and
-          $A \to C$ into $A \to BC$.
-  \end{enumerate}
-
-  The order of steps 1 and 2 may vary by textbook, but the result is equivalent.
-\end{frame}
-
-% ---------------------------------------------------------------------------
-\begin{frame}{Canonical Cover -- Example}
-  \textbf{Variables:} A = City, B = Country, C = Full Station Name,
-  D = State, E = Train Station\\
-  \textbf{Initial FDs:} $ABE \to C$, $E \to AC$, $E \to A$, $A \to BD$
-  \hfill \textbf{Candidate key:} $E$
-
-  \vspace{6pt}
-  \textbf{Step 1 --- Reduce Left Sides:}\\
-  We have $A \to BD$ and $E \to A$, so $E \to B$ transitively.\\
-  Therefore $B$ is redundant in $ABE \to C$: reduce to $E \to C$.\\
-  Result: $\{E \to C,\ E \to AC,\ E \to A,\ A \to BD\}$
-
-  \vspace{6pt}
-  \textbf{Step 2 --- Reduce Right Sides:}\\
-  In $E \to AC$: since $E \to A$ already exists, $A$ is redundant on the right.
-  Reduce $E \to AC$ to $E \to C$.  But $E \to C$ already exists, so
-  $E \to AC$ becomes $E \to \emptyset$ (after also removing $C$).\\
-  Result: $\{E \to \emptyset,\ E \to C,\ E \to A,\ A \to BD\}$
-
-  \vspace{6pt}
-  \textbf{Step 3 --- Delete Empty FDs:}\\
-  Remove $E \to \emptyset$.\\
-  Result: $\{E \to C,\ E \to A,\ A \to BD\}$
-
-  \vspace{6pt}
-  \textbf{Step 4 --- Join FDs with Same Left Side:}\\
-  Merge $E \to C$ and $E \to A$ into $E \to AC$.
-
-  \vspace{6pt}
-  \begin{block}{Final Canonical Cover $F_c$}
-    $E \to AC, \quad A \to BD$
+  \vspace{4pt}
+  \begin{block}{Step 4 --- Merge Same Left Sides}
+    Merge $E \to C$ and $E \to A$ into $E \to AC$.\\[4pt]
+    \textbf{Canonical Cover:} \quad $F_c = \{E \to AC, \quad A \to BD\}$
   \end{block}
 \end{frame}
 
 % ---------------------------------------------------------------------------
-\begin{frame}{Synthesis Algorithm ($\to$ 3NF)}
+\begin{frame}{Synthesis Algorithm --- Target: 3NF}
+  \begin{block}{Input / Output}
+    \textbf{Input:} Relation $R$, functional dependencies $F$, candidate keys
+    of $R$.\\
+    \textbf{Output:} A set of relations in 3NF --- lossless and dependency-preserving.
+  \end{block}
+
+  \begin{block}{Four Steps}
+    \begin{enumerate}
+      \item \textbf{Compute} the canonical cover $F_c$.
+      \item \textbf{Create one relation per FD in $F_c$:}\\
+            For each $A \to B \in F_c$, define $R_i = A \cup B$.
+      \item \textbf{Ensure a candidate key is covered:}\\
+            If none of the relations from step 2 contains a candidate key of
+            $R$, add a new relation $R_k$ consisting of the attributes of one
+            candidate key.
+      \item \textbf{Remove redundant relations:}\\
+            Delete any $R_i$ that is entirely contained in another $R_j$
+            ($R_i \subseteq R_j$).
+    \end{enumerate}
+  \end{block}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{Synthesis Algorithm --- Worked Example}
   \begin{block}{Input}
-    Relation $R$, canonical cover $F_c$, candidate keys of $R$.
+    $F_c = \{A \to EBD, \quad F \to CDB, \quad CD \to EF\}$
+    \hfill Candidate key: $\{A, F\}$
   \end{block}
 
-  \textbf{Four Steps:}
-  \begin{enumerate}
-    \item \textbf{Calculate} the canonical cover $F_c$ (see previous slide).
-    \item \textbf{Create one relation per FD in $F_c$:} For each
-          $A \to B \in F_c$, define $R_i = A \cup B$.
-    \item \textbf{Ensure a candidate key is covered:} If none of the relations
-          from step 2 contains a candidate key of $R$, add a new relation
-          $R_k = \text{(attributes of one candidate key)}$.
-    \item \textbf{Remove redundant relations:} Delete any $R_i$ that is
-          entirely contained in another $R_j$ ($R_i \subseteq R_j$).
-  \end{enumerate}
+  \begin{block}{Step 2 --- One Relation per FD}
+    \begin{itemize}
+      \item $A \to EBD$: \quad $R_1 = \{A, B, D, E\}$
+      \item $F \to CDB$: \quad $R_2 = \{B, C, D, F\}$
+      \item $CD \to EF$: \quad $R_3 = \{C, D, E, F\}$
+    \end{itemize}
+  \end{block}
 
-  \vspace{6pt}
-  \begin{examples}{Example}
-    FDs: $A \to EBD$, $F \to CDB$, $CD \to EF$ \hfill Candidate key: $AF$
+  \begin{block}{Steps 3 \& 4 --- Key Coverage and Redundancy Removal}
+    Key $\{A,F\}$ not in $R_1$--$R_3$ $\Rightarrow$ add $R_4 = \{A, F\}$.\\
+    No $R_i \subseteq R_j$ --- nothing to remove.
+  \end{block}
 
-    Step 2: $R_1 = \{A,B,D,E\}$, $R_2 = \{B,C,D,F\}$, $R_3 = \{C,D,E,F\}$
-
-    Step 3: None of $R_1$--$R_3$ contains $AF$, so add $R_4 = \{A,F\}$.
-
-    Step 4: No relation is a subset of another.
-
-    \textbf{Result:} $R_1\{ABDE\}$, $R_2\{BCDF\}$, $R_3\{CDEF\}$,
-    $R_4\{AF\}$
-  \end{examples}
+  \begin{block}{Result}
+    $R_1\{A,B,D,E\}$, \; $R_2\{B,C,D,F\}$, \; $R_3\{C,D,E,F\}$, \; $R_4\{A,F\}$
+  \end{block}
 \end{frame}
 
 % ---------------------------------------------------------------------------
-\begin{frame}{Decomposition Algorithm ($\to$ BCNF)}
-  \begin{block}{Input}
-    Relation $R$, functional dependencies $F$.
+\begin{frame}{Decomposition Algorithm --- Target: BCNF}
+  \begin{block}{Input / Output}
+    \textbf{Input:} Relation $R$, functional dependencies $F$.\\
+    \textbf{Output:} A set of relations in BCNF --- lossless.
+    (FDs may not all be preserved.)
   \end{block}
 
-  \textbf{Three Steps:}
-  \begin{enumerate}
-    \item \textbf{Initialise:} $Z = \{R\}$.
-    \item \textbf{Decompose BCNF violators:} While any $R_i \in Z$ contains
-          an FD $A \to B$ where $A$ is \emph{not} a superkey of $R_i$:
-          \begin{itemize}
-            \item Split $R_i$ into $R_{i1} = A \cup B$ and
-                  $R_{i2} = R_i \setminus B$.
-            \item Replace $R_i$ in $Z$ with $R_{i1}$ and $R_{i2}$.
-          \end{itemize}
-    \item \textbf{Repeat} until all relations in $Z$ are in BCNF.
-  \end{enumerate}
+  \begin{block}{Three Steps}
+    \begin{enumerate}
+      \item \textbf{Initialise:} $Z = \{R\}$.
+      \item \textbf{Decompose BCNF violators:} While any $R_i \in Z$ contains
+            an FD $A \to B$ where $A$ is \emph{not} a superkey of $R_i$:
+            \begin{itemize}
+              \item Split $R_i$ into $R_{i1} = A \cup B$ and
+                    $R_{i2} = R_i \setminus B$.
+              \item Replace $R_i$ in $Z$ with $R_{i1}$ and $R_{i2}$.
+            \end{itemize}
+      \item \textbf{Repeat} until all relations in $Z$ satisfy BCNF.
+    \end{enumerate}
+  \end{block}
 
-  \vspace{6pt}
-  \begin{examples}{Example}
-    $R = \{A,B,C,D,E\}$; FDs: $ABE \to C$, $E \to AC$, $E \to A$,
-    $A \to BD$
+  \begin{alertblock}{Termination}
+    The algorithm always terminates because each decomposition step strictly
+    reduces the number of attributes in at least one relation.
+  \end{alertblock}
+\end{frame}
 
-    \textbf{Violation:} $A \to BD$ (A is not a superkey of $R$).
+% ---------------------------------------------------------------------------
+\begin{frame}{Decomposition Algorithm --- Worked Example}
+  \begin{block}{Input}
+    $R = \{A, B, C, D, E\}$, \quad FDs: $ABE \to C$, $E \to AC$, $E \to A$, $A \to BD$\\
+    (Canonical cover: $F_c = \{E \to AC, \; A \to BD\}$)
+  \end{block}
 
-    \textbf{Decompose:} $R_1 = A \cup BD = \{A,B,D\}$, \quad
-    $R_2 = ABCDE \setminus BD = \{A,C,E\}$
+  \begin{block}{Iteration 1: Find a BCNF Violation in $R$}
+    FD $A \to BD$: $A$ is \textbf{not} a superkey of $R$ (candidate key is $E$).\\
+    Decompose: $R_1 = A \cup \{B, D\} = \{A, B, D\}$, \quad
+    $R_2 = ABCDE \setminus \{B, D\} = \{A, C, E\}$\\
+    $Z = \{R_1\{A,B,D\},\; R_2\{A,C,E\}\}$
+  \end{block}
 
-    $Z = \{R_1\{ABD\},\ R_2\{ACE\}\}$
+  \begin{block}{Verify $R_1$ and $R_2$}
+    \textbf{$R_1\{A,B,D\}$:} candidate key $A$; \; $A \to BD$ --- BCNF satisfied. \checkmark\\
+    \textbf{$R_2\{A,C,E\}$:} candidate key $E$; \; $E \to AC$ --- BCNF satisfied. \checkmark
+  \end{block}
 
-    Check $R_1$: candidate key $A$; $A \to BD$ --- BCNF satisfied.
+  \begin{block}{Result}
+    $R_1\{A,B,D\}$ and $R_2\{A,C,E\}$ --- both in BCNF.
+  \end{block}
+\end{frame}
 
-    Check $R_2$: candidate key $E$; $E \to AC$ --- BCNF satisfied.
+% ---------------------------------------------------------------------------
+\begin{frame}{Algorithm Comparison and When to Use Which}
+  \begin{center}
+    \small
+    \begin{tabular}{lll}
+      \toprule
+      \textbf{Property} & \textbf{Synthesis (3NF)} & \textbf{Decomposition (BCNF)} \\
+      \midrule
+      Target            & 3NF                       & BCNF \\
+      Input required    & Canonical cover $F_c$     & Any FD set \\
+      Lossless?         & Yes                       & Yes \\
+      Dep.-preserving?  & Always                    & Not guaranteed \\
+      Nr.\ of tables    & Predictable (one per FD)  & May vary \\
+      Complexity        & Medium                    & Higher (iterative) \\
+      \bottomrule
+    \end{tabular}
+  \end{center}
 
-    \textbf{Result:} $R_1\{ABD\}$, $R_2\{ACE\}$
-  \end{examples}
+  \vspace{0.4em}
+  \begin{block}{Decision Guide}
+    \begin{itemize}
+      \item Use the \textbf{Synthesis Algorithm} as your default --- it produces
+            3NF, preserves all dependencies, and is easy to apply.
+      \item Switch to the \textbf{Decomposition Algorithm} only when a BCNF
+            schema is explicitly required \emph{and} losing some FDs is
+            acceptable (or can be enforced by triggers / application logic).
+    \end{itemize}
+  \end{block}
 \end{frame}

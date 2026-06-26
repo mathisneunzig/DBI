@@ -1,27 +1,28 @@
 % ------------------------------------------------------------
 \begin{frame}[fragile]{Common Query Anti-Patterns}
-  \begin{block}{Patterns that prevent index use or waste resources}
+  \begin{block}{Patterns That Prevent Index Use or Waste Resources}
 \begin{lstlisting}[style=sqlstyle]
--- Anti-pattern 1: function on indexed column
-WHERE UPPER(name) = 'MILLER'      -- index on name not used
--- Fix: store data in normalized case, or use a functional index
+-- Anti-pattern 1: function on indexed column (index bypassed!)
+WHERE UPPER(Name) = 'THE BEATLES'   -- index on Name not used
+-- Fix: store data in normalised case, or use a functional index
 
--- Anti-pattern 2: leading wildcard
-WHERE name LIKE '%miller%'         -- full table scan
+-- Anti-pattern 2: leading wildcard (full table scan)
+WHERE Title LIKE '%Road%'            -- cannot use B-tree index
 -- Fix: use FULLTEXT index for free-text search
 
--- Anti-pattern 3: implicit type conversion
-WHERE id = '42'    -- id is INT, '42' is VARCHAR -> may skip index
--- Fix: match the data type: WHERE id = 42
+-- Anti-pattern 3: implicit type conversion (may skip index)
+WHERE ArtistID = '1'  -- ArtistID is INT, '1' is VARCHAR
+-- Fix: match data type: WHERE ArtistID = 1
 
--- Anti-pattern 4: SELECT * on large tables
-SELECT * FROM orders;              -- pulls every column, every row
--- Fix: always select only the columns you actually need
+-- Anti-pattern 4: SELECT * (pulls every column every row)
+SELECT * FROM Album;
+-- Fix: name only the columns you actually need
 
 -- Anti-pattern 5: correlated subquery in SELECT
-SELECT name, (SELECT COUNT(*) FROM orders WHERE customer_id = c.id)
-FROM customer c;                   -- executes subquery per row!
--- Fix: use LEFT JOIN + GROUP BY instead
+SELECT Name,
+  (SELECT COUNT(*) FROM Album WHERE ArtistID = ar.ArtistID)
+FROM Artist ar;   -- re-executes subquery for EVERY artist row!
+-- Fix: use LEFT JOIN + GROUP BY
 \end{lstlisting}
   \end{block}
 \end{frame}
@@ -31,55 +32,55 @@ FROM customer c;                   -- executes subquery per row!
   The \textbf{N+1 problem} is one of the most common performance pitfalls
   in applications that use ORMs or generate SQL in loops.
 
-  \begin{block}{What it is}
+  \begin{block}{What it is -- with Music DB}
 \begin{lstlisting}[style=sqlstyle]
--- 1 query to get all orders
-SELECT * FROM orders;   -- returns N rows
+-- Step 1: one query to fetch all albums (returns N rows)
+SELECT * FROM Album;   -- returns 3 albums
 
--- Then N queries, one per order, to get the customer:
-SELECT * FROM customer WHERE id = 1;
-SELECT * FROM customer WHERE id = 2;
--- ... N more queries
+-- Step 2: N queries, one per album, to get the artist name
+SELECT Name FROM Artist WHERE ArtistID = 1;  -- for Abbey Road
+SELECT Name FROM Artist WHERE ArtistID = 2;  -- for Autobahn
+SELECT Name FROM Artist WHERE ArtistID = 3;  -- for RAM
+-- = 3 extra queries (N=3) => 1 + 3 = 4 total queries
 \end{lstlisting}
   \end{block}
 
-  \begin{block}{The fix: one JOIN instead of N+1 queries}
+  \begin{block}{The Fix: One JOIN Instead of N+1 Queries}
 \begin{lstlisting}[style=sqlstyle]
 -- Single query returns everything needed
-SELECT o.id, o.total, c.name
-FROM   orders o
-JOIN   customer c ON o.customer_id = c.id;
+SELECT al.Title, ar.Name AS artist_name, al.ReleaseYear
+FROM   Album  al
+JOIN   Artist ar ON al.ArtistID = ar.ArtistID;
 \end{lstlisting}
   \end{block}
 
-  \begin{alertblock}{Why it matters}
-    With 10,000 orders, N+1 generates 10,001 round-trips to the database.
-    Even at 1\,ms per query that is 10 seconds. A single JOIN takes
-    milliseconds.
+  \begin{alertblock}{Why It Matters at Scale}
+    With 10,000 albums: N+1 generates \textbf{10,001 database round-trips}.
+    Even at 1\,ms per query = \textbf{10 seconds}.
+    A single JOIN returns the same data in \textbf{milliseconds}.
   \end{alertblock}
 \end{frame}
 
 % ------------------------------------------------------------
 \begin{frame}[fragile]{Query Optimization -- Practical Checklist}
-  \begin{block}{Step-by-step approach}
+  \begin{block}{Step-by-Step Approach}
     \begin{enumerate}
-      \item \textbf{Run \texttt{EXPLAIN ANALYZE}} -- identify the slowest
-            operation in the plan (high \texttt{rows}, \texttt{ALL} access,
-            \texttt{Using filesort}).
+      \item \textbf{Run \texttt{EXPLAIN ANALYZE}} -- find the slowest operation
+            (\texttt{type=ALL}, high \texttt{rows}, \texttt{Using filesort})
       \item \textbf{Check for missing indexes} on \texttt{WHERE},
-            \texttt{JOIN ON}, and \texttt{ORDER BY} columns.
-      \item \textbf{Avoid functions on indexed columns} in \texttt{WHERE}
-            clauses -- rewrite the predicate instead.
+            \texttt{JOIN ON}, and \texttt{ORDER BY} columns
+      \item \textbf{Avoid functions on indexed columns} in \texttt{WHERE} --
+            rewrite the predicate instead
       \item \textbf{Select only needed columns} -- drop \texttt{SELECT *};
-            use covering indexes where possible.
-      \item \textbf{Push filters early} -- filter rows as close to the
-            source table as possible, before joins.
+            use covering indexes where possible
+      \item \textbf{Push filters early} -- filter rows close to the source
+            table, before joins
       \item \textbf{Replace correlated subqueries} with \texttt{JOIN} or
-            window functions.
-      \item \textbf{Batch writes}: wrap many small \texttt{INSERT} statements
-            in a single multi-row \texttt{INSERT} or a transaction.
-      \item \textbf{Update statistics}: run \texttt{ANALYZE TABLE}
-            periodically so the planner has fresh data.
+            window functions
+      \item \textbf{Batch writes}: wrap many small \texttt{INSERT}s in one
+            multi-row \texttt{INSERT} or a transaction
+      \item \textbf{Update statistics}: run \texttt{ANALYZE TABLE} so the
+            planner has fresh data
     \end{enumerate}
   \end{block}
 \end{frame}

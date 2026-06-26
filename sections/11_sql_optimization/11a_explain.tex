@@ -4,84 +4,104 @@
 \begin{frame}{Why Query Optimization Matters}
   A correct query that runs in 30 seconds is useless in a web application that
   must respond in under 200\,ms. As data volumes grow, the difference between
-  an optimized and an unoptimized query can be the difference between seconds
-  and hours.
+  an optimized and an unoptimized query can be seconds vs.\ hours.
 
-  \medskip
   \begin{block}{Two Levels of Optimization}
     \begin{enumerate}
-      \item \textbf{Query-level}: rewrite the SQL to express the same result
-            more efficiently -- reduce the number of rows processed as early
-            as possible.
+      \item \textbf{Query-level}: rewrite the SQL to be more efficient --
+            reduce rows processed as early as possible
       \item \textbf{Schema-level}: add or adjust \textbf{indexes} so the
-            database engine can locate the required rows without scanning the
-            entire table.
+            database can locate rows without scanning the entire table
     \end{enumerate}
   \end{block}
 
-  \begin{alertblock}{The golden rule}
-    \textbf{Measure before you optimize.} Use \texttt{EXPLAIN} / \texttt{EXPLAIN
-    ANALYZE} to find the real bottleneck -- do not guess. Optimizing the wrong
-    query wastes time and can even make things worse.
+  \begin{alertblock}{The Golden Rule}
+    \textbf{Measure before you optimize.} Use \texttt{EXPLAIN} /
+    \texttt{EXPLAIN ANALYZE} to find the real bottleneck.
+    Optimizing the wrong query wastes time and can make things worse.
   \end{alertblock}
 \end{frame}
 
 % ------------------------------------------------------------
 \begin{frame}{How a Query is Executed -- The Query Planner}
   When you send a \texttt{SELECT} statement, the DBMS does not execute it
-  literally. Instead, a \textbf{query planner (optimizer)} produces an
-  \emph{execution plan} -- a tree of physical operations that produce the
-  same result as efficiently as possible.
+  literally. A \textbf{query planner} produces an \emph{execution plan} --
+  a tree of physical operations that produce the same result as efficiently
+  as possible.
 
-  \medskip
-  \begin{block}{Typical plan steps}
+  \begin{block}{Planning Steps}
     \begin{enumerate}
       \item \textbf{Parsing}: validate syntax, resolve table/column names
       \item \textbf{Logical rewriting}: push predicates down, eliminate
             redundancy, reorder joins
-      \item \textbf{Statistics lookup}: the planner uses \emph{table
-            statistics} (row count, column cardinality, histogram) to
-            estimate costs
-      \item \textbf{Physical plan selection}: choose between full table
-            scan, index scan, nested-loop join, hash join, etc.
+      \item \textbf{Statistics lookup}: uses row count, cardinality,
+            histograms to estimate costs
+      \item \textbf{Physical plan selection}: choose full scan, index scan,
+            nested-loop join, hash join, etc.
       \item \textbf{Execution}: run the chosen plan and stream results
     \end{enumerate}
   \end{block}
 
-  \begin{examples}{Key insight}
-    The planner can only choose from the access paths that \emph{exist}.
-    Adding an index creates a new, cheaper access path for the planner to
-    choose.
+  \begin{examples}{Key Insight}
+    The planner can only choose from \emph{access paths that exist}.
+    Adding an index creates a new, cheaper path for the planner to choose.
   \end{examples}
 \end{frame}
 
 % ------------------------------------------------------------
-\begin{frame}[fragile]{EXPLAIN and EXPLAIN ANALYZE}
-  \begin{block}{Inspecting the Execution Plan}
+\begin{frame}[fragile]{EXPLAIN -- Reading the Execution Plan}
+  \begin{block}{Syntax}
 \begin{lstlisting}[style=sqlstyle]
--- Show the query plan (estimated costs, no actual execution)
+-- Show estimated plan (no actual execution)
 EXPLAIN
-SELECT * FROM product WHERE brand_id = 5;
+SELECT * FROM Track WHERE AlbumID = 1;
 
--- Execute the query AND show actual timing + row counts
+-- Execute AND show actual timing + row counts
 EXPLAIN ANALYZE
-SELECT p.name, b.name
-FROM   product p
-JOIN   brand b ON p.brand_id = b.id
-WHERE  p.price > 10;
+SELECT ar.Name, al.Title
+FROM   Artist ar
+JOIN   Album  al ON ar.ArtistID = al.ArtistID
+WHERE  al.Genre = 'Electronic';
 \end{lstlisting}
   \end{block}
 
-  \begin{block}{What to look for in the output}
+  \begin{block}{What to Look For}
     \begin{itemize}
-      \item \textbf{Full Table Scan} (\texttt{ALL} in MySQL): the engine
-            reads every row -- a red flag for large tables.
-      \item \textbf{Index Scan / Index Range Scan}: the engine navigates
-            an index tree -- much faster.
-      \item \textbf{rows}: estimated number of rows examined.
-            A high value with no index means a slow query.
-      \item \textbf{Extra: Using filesort}: sorting without an index --
-            consider adding an index on the \texttt{ORDER BY} column.
+      \item \textbf{type = ALL}: full table scan -- red flag for large tables
+      \item \textbf{type = ref / range}: index used -- good
+      \item \textbf{rows}: estimated rows examined. High value = slow query
+      \item \textbf{Extra: Using filesort}: sorting without index -- add one
+      \item \textbf{Extra: Using temporary}: temp table created -- expensive
     \end{itemize}
+  \end{block}
+\end{frame}
+
+% ------------------------------------------------------------
+\begin{frame}[fragile]{EXPLAIN -- Example Output Comparison}
+  \begin{block}{Query: \texttt{SELECT * FROM Track WHERE AlbumID = 3}}
+\begin{lstlisting}[style=sqlstyle]
+-- WITHOUT index on AlbumID:
+-- type=ALL  key=NULL  rows=5  Extra=Using where
+-- Reads ALL 5 rows to find matches (full table scan)
+
+-- After: CREATE INDEX idx_track_album ON Track(AlbumID);
+
+-- WITH index on AlbumID:
+-- type=ref  key=idx_track_album  rows=2
+-- Only reads 2 matching rows directly via index
+\end{lstlisting}
+  \end{block}
+
+  \begin{block}{Reading the key EXPLAIN columns}
+    \begin{tabular}{@{}ll@{}}
+      \toprule
+      \textbf{Column} & \textbf{Meaning} \\
+      \midrule
+      \texttt{type}   & Access method: ALL (bad) $\to$ ref/range (good) $\to$ const (best) \\
+      \texttt{key}    & Index used (NULL = no index) \\
+      \texttt{rows}   & Estimated rows to examine \\
+      \texttt{Extra}  & Additional info: filesort, Using index (covering), etc. \\
+      \bottomrule
+    \end{tabular}
   \end{block}
 \end{frame}

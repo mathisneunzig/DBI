@@ -1,62 +1,152 @@
 % ----------------------------------------------------------
-\begin{frame}[fragile]{Constraints}
-  \begin{block}{Defining Integrity Rules at Column and Table Level}
-\begin{lstlisting}[style=sqlstyle]
-CREATE TABLE product (
-    id       INT AUTO_INCREMENT,
-    name     VARCHAR(100) NOT NULL,
-    email    VARCHAR(255) UNIQUE,
-    price    DECIMAL(10,2) DEFAULT 0.00,
-    brand_id INT,
-    PRIMARY KEY (id),
-    FOREIGN KEY (brand_id) REFERENCES brand(id)
-        ON DELETE SET NULL
-        ON UPDATE CASCADE,
-    CHECK (price >= 0)
-);
-\end{lstlisting}
-  \end{block}
+\begin{frame}{Constraints -- Overview}
+  Constraints are \textbf{rules enforced by the DBMS} that prevent invalid data from entering the
+  database. They are the last line of defence for data integrity -- independent of the application.
 
-  \begin{block}{Referential Actions}
-    \begin{itemize}
-      \item \texttt{ON DELETE CASCADE} -- if the referenced brand is
-            deleted, \textbf{all its products are also deleted automatically}.
-      \item \texttt{ON DELETE SET NULL} -- if the brand is deleted,
-            \texttt{brand\_id} becomes \texttt{NULL} (preserves products).
-      \item \texttt{ON UPDATE CASCADE} -- if the brand's primary key
-            changes, the foreign key in every product row is updated
-            automatically.
-    \end{itemize}
+  \begin{center}
+  \renewcommand{\arraystretch}{1.3}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    \textbf{Constraint}  & \textbf{Scope}  & \textbf{Guarantees} \\
+    \midrule
+    \texttt{NOT NULL}    & Column & Column always contains a value \\
+    \texttt{UNIQUE}      & Column/Table & All values are distinct \\
+    \texttt{PRIMARY KEY} & Column/Table & NOT NULL + UNIQUE; identifies each row \\
+    \texttt{FOREIGN KEY} & Column & References a valid row in another table \\
+    \texttt{CHECK}       & Column/Table & Boolean expression is always true \\
+    \texttt{DEFAULT}     & Column & Fallback value when none is provided \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+
+  \begin{block}{Why Not Just Validate in Application Code?}
+    Application code can be bypassed (direct DB access, bugs, multiple applications).
+    Constraints enforced at the \textbf{database level} hold regardless of which client writes data.
   \end{block}
 \end{frame}
 
 % ----------------------------------------------------------
+\begin{frame}[fragile]{Constraints in Practice -- Full Example}
+  \begin{lstlisting}[style=sqlstyle]
+CREATE TABLE Track (
+    id           INT            AUTO_INCREMENT,
+    title        VARCHAR(200)   NOT NULL,
+    duration_sec INT            NOT NULL DEFAULT 0,
+    track_no     TINYINT        UNSIGNED,
+    album_id     INT            NOT NULL,
+    CONSTRAINT pk_track
+        PRIMARY KEY (id),
+    CONSTRAINT uq_track_pos
+        UNIQUE (album_id, track_no),       -- no duplicate positions
+    CONSTRAINT fk_track_album
+        FOREIGN KEY (album_id) REFERENCES Album(id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT chk_duration
+        CHECK (duration_sec >= 0)
+);
+  \end{lstlisting}
+
+  \begin{itemize}
+    \item \texttt{UNIQUE (album\_id, track\_no)}: composite unique -- each track number
+          must be unique \emph{within} an album, but the same number can occur in different albums.
+  \end{itemize}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{Foreign Keys -- ON DELETE Actions}
+  What should happen to child rows when the parent row is deleted?
+
+  \begin{lstlisting}[style=sqlstyle]
+-- CASCADE: deleting Artist also deletes all their Albums
+FOREIGN KEY (artist_id) REFERENCES Artist(id)
+    ON DELETE CASCADE
+
+-- SET NULL: deleting Artist sets album.artist_id to NULL
+FOREIGN KEY (artist_id) REFERENCES Artist(id)
+    ON DELETE SET NULL
+
+-- RESTRICT (default): reject the DELETE if child rows exist
+FOREIGN KEY (artist_id) REFERENCES Artist(id)
+    ON DELETE RESTRICT
+
+-- SET DEFAULT: sets child FK to its DEFAULT value
+FOREIGN KEY (artist_id) REFERENCES Artist(id)
+    ON DELETE SET DEFAULT
+  \end{lstlisting}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{ON DELETE Comparison Table}
+  \begin{center}
+  \renewcommand{\arraystretch}{1.4}
+  \begin{tabularx}{\linewidth}{@{}lXX@{}}
+    \toprule
+    \textbf{Action} & \textbf{Effect on child rows} & \textbf{Use when \ldots} \\
+    \midrule
+    \texttt{RESTRICT}   & Delete is \textbf{blocked} if child rows exist & Child rows must not become orphans (default) \\[4pt]
+    \texttt{CASCADE}    & Child rows are \textbf{deleted automatically} & Children are meaningless without the parent (e.g.\ order lines without an order) \\[4pt]
+    \texttt{SET NULL}   & FK column set to \textbf{NULL}                & Children can exist independently (e.g.\ products after a brand is discontinued) \\[4pt]
+    \texttt{SET DEFAULT}& FK column set to its \textbf{DEFAULT value}   & A fallback parent exists (rare) \\
+    \bottomrule
+  \end{tabularx}
+  \end{center}
+
+  \begin{alertblock}{CASCADE -- Handle with Care}
+    \texttt{ON DELETE CASCADE} propagates deletes automatically and silently. Deleting one top-level
+    row can cascade through multiple related tables. Always verify which tables are affected before
+    using CASCADE in a production schema.
+  \end{alertblock}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{ON DELETE -- Concrete Examples}
+  \begin{lstlisting}[style=sqlstyle]
+-- Scenario 1: CASCADE
+-- Deleting artist "Aurora" also deletes all her Albums and
+-- (if Track has CASCADE too) all their Tracks.
+DELETE FROM Artist WHERE name = 'Aurora';
+-- -> Album rows with artist_id = Aurora.id are deleted
+-- -> Track rows of those albums are deleted too
+
+-- Scenario 2: SET NULL
+-- Artist is deleted; albums remain but have no artist
+DELETE FROM Artist WHERE id = 1;
+-- -> Album.artist_id becomes NULL for those albums
+
+-- Scenario 3: RESTRICT (default)
+-- Cannot delete artist if albums reference them
+DELETE FROM Artist WHERE id = 1;
+-- ERROR: Cannot delete or update a parent row:
+-- a foreign key constraint fails (Album.fk_album_artist)
+  \end{lstlisting}
+\end{frame}
+
+% ----------------------------------------------------------
 \begin{frame}[fragile]{Named Constraints and ALTER TABLE ADD CONSTRAINT}
-  \begin{block}{Naming Constraints for Easier Management}
-\begin{lstlisting}[style=sqlstyle]
-CREATE TABLE employee (
-    id    INT,
-    email VARCHAR(255),
-    age   INT,
-    CONSTRAINT pk_employee PRIMARY KEY (id),
-    CONSTRAINT uq_email    UNIQUE (email),
-    CONSTRAINT chk_age     CHECK (age >= 18)
+  \begin{lstlisting}[style=sqlstyle]
+-- Naming constraints at table creation
+CREATE TABLE Album (
+    id        INT,
+    title     VARCHAR(200),
+    year      YEAR,
+    artist_id INT,
+    CONSTRAINT pk_album    PRIMARY KEY (id),
+    CONSTRAINT chk_year    CHECK (year BETWEEN 1877 AND 2100)
 );
 
 -- Add a constraint to an existing table
-ALTER TABLE employee
-ADD CONSTRAINT fk_dept
-FOREIGN KEY (dept_id) REFERENCES department(id);
+ALTER TABLE Album
+ADD CONSTRAINT fk_album_artist
+    FOREIGN KEY (artist_id) REFERENCES Artist(id)
+    ON DELETE CASCADE;
 
 -- Remove a named constraint
-ALTER TABLE employee DROP CONSTRAINT chk_age;
-\end{lstlisting}
-  \end{block}
+ALTER TABLE Album DROP FOREIGN KEY fk_album_artist;
+ALTER TABLE Album DROP CHECK chk_year;
+  \end{lstlisting}
 
   \begin{block}{Why Name Constraints?}
-    Named constraints make error messages more readable
-    (``Duplicate entry violates constraint \texttt{uq\_email}'' vs.\
-    a generic cryptic error) and make it possible to drop a specific
-    constraint by name without recreating the entire table.
+    Named constraints appear in error messages by name (e.g.\ ``Duplicate entry violates
+    \texttt{uq\_track\_pos}''), making debugging faster. They can also be dropped individually.
   \end{block}
 \end{frame}

@@ -1,88 +1,96 @@
 % ----------------------------------------------------------
 \begin{frame}[fragile]{WHERE -- Filtering Rows}
-  \begin{block}{Basic Filtering}
+  \begin{block}{Basic Filtering -- Music Database}
 \begin{lstlisting}[style=sqlstyle]
-SELECT * FROM product WHERE price > 5;
-SELECT name FROM brand WHERE city = 'Hamburg';
+-- Albums released after 2000
+SELECT Title, ReleaseYear FROM Album
+WHERE ReleaseYear > 2000;
+
+-- Artists from Germany
+SELECT Name FROM Artist
+WHERE Country = 'Germany';
+
+-- Tracks shorter than 3 minutes (180 seconds)
+SELECT Title, Duration FROM Track
+WHERE Duration < 180;
 \end{lstlisting}
   \end{block}
 
-  \begin{itemize}
-    \item \texttt{WHERE} filters \textbf{which rows} are included in the
-          result -- only rows for which the condition evaluates to
-          \texttt{TRUE} are kept.
-    \item String comparisons require \textbf{single quotes}
-          (\texttt{'Hamburg'}), not double quotes.
-    \item \texttt{NULL} comparisons are a common pitfall: \texttt{= NULL}
-          always evaluates to \texttt{NULL} (unknown), never \texttt{TRUE}.
-          Always use \texttt{IS NULL} or \texttt{IS NOT NULL}.
-    \item Logical operators (\texttt{AND}, \texttt{OR}, \texttt{NOT}) can
-          combine multiple conditions; use parentheses for grouping.
-  \end{itemize}
+  \begin{block}{Key Rules}
+    \begin{itemize}
+      \item Only rows where the condition evaluates to \texttt{TRUE} are returned
+      \item String comparisons require \textbf{single quotes}: \texttt{'Germany'}
+      \item \texttt{NULL} comparisons: \textbf{never} use \texttt{= NULL},
+            always use \texttt{IS NULL} / \texttt{IS NOT NULL}
+    \end{itemize}
+  \end{block}
 
-  \begin{block}{Logical Operator Precedence}
+  \begin{block}{Operator Precedence}
     \texttt{()} $\to$ \texttt{NOT} $\to$ \texttt{AND} $\to$ \texttt{OR}\\[2pt]
-    When in doubt, add parentheses -- they cost nothing and prevent subtle
-    bugs caused by unexpected precedence.
+    When in doubt, add parentheses -- they cost nothing and prevent subtle bugs.
   \end{block}
 \end{frame}
 
 % ----------------------------------------------------------
 \begin{frame}[fragile]{WHERE -- Logical Operators}
-  \begin{block}{AND, OR, NOT}
+  \begin{block}{AND, OR, NOT -- Music Database Examples}
 \begin{lstlisting}[style=sqlstyle]
 -- AND: both conditions must be true
-SELECT * FROM brand
-WHERE city = 'Hamburg' AND legal_form = 'AG';
+-- Electronic albums released before 2000
+SELECT Title FROM Album
+WHERE Genre = 'Electronic' AND ReleaseYear < 2000;
+-- Result: Autobahn
 
 -- OR: at least one condition must be true
-SELECT * FROM employee
-WHERE department_id = 1 OR first_name = 'Mathis';
+-- Artists from UK or France
+SELECT Name FROM Artist
+WHERE Country = 'UK' OR Country = 'France';
+-- Result: The Beatles, Daft Punk
 
--- NOT: negates the condition
-SELECT * FROM product WHERE NOT unit_id = 'KG';
-
--- Combining with parentheses
-SELECT * FROM brand
-WHERE legal_form = 'KG'
-  AND (city = 'Hamburg' OR city = 'Berlin');
+-- Combining with parentheses (essential for correctness!)
+SELECT Title FROM Album
+WHERE Genre = 'Electronic'
+  AND (ReleaseYear < 1980 OR ReleaseYear > 2010);
+-- Result: Autobahn (1974), Random Access Memories (2013)
 \end{lstlisting}
   \end{block}
 
   \begin{alertblock}{Common Mistake: Missing Parentheses}
-    Without parentheses in the last example, \texttt{AND} binds tighter than
-    \texttt{OR}, so the query would be interpreted as
-    \texttt{(legal\_form = 'KG' AND city = 'Hamburg') OR city = 'Berlin'} --
-    a completely different result!
+    Without parentheses: \texttt{A AND B OR C} is read as \texttt{(A AND B) OR C}.
+    This produces completely different results -- always use parentheses when
+    mixing \texttt{AND} and \texttt{OR}.
   \end{alertblock}
 \end{frame}
 
 % ----------------------------------------------------------
-\begin{frame}[fragile]{WHERE -- Comparison and BETWEEN}
+\begin{frame}[fragile]{WHERE -- Comparison, BETWEEN, IN}
   \begin{block}{Standard Operators and BETWEEN / IN}
 \begin{lstlisting}[style=sqlstyle]
 -- Standard comparison operators
-SELECT * FROM product WHERE price >= 5;
-SELECT * FROM product WHERE alcohol <> 0; -- != also works
+SELECT Title FROM Album WHERE ReleaseYear >= 2000;
+SELECT Title FROM Album WHERE Genre <> 'Rock'; -- != also works
 
 -- BETWEEN (inclusive on both ends)
-SELECT * FROM product WHERE price BETWEEN 2 AND 5;
+SELECT Title, Duration FROM Track
+WHERE Duration BETWEEN 200 AND 350;
+-- Returns: Come Together (259), Get Lucky (248), Instant Crush (337)
 
 -- IN (equivalent to multiple OR conditions)
-SELECT * FROM brand
-WHERE city IN ('Hamburg', 'Berlin', 'Muenchen');
+SELECT Name FROM Artist
+WHERE Country IN ('Germany', 'France');
+-- Returns: Kraftwerk, Daft Punk
+
+-- NOT IN
+SELECT Name FROM Artist
+WHERE Country NOT IN ('UK');
+-- Returns: Kraftwerk, Daft Punk
 \end{lstlisting}
   \end{block}
 
   \begin{itemize}
-    \item \texttt{<>} and \texttt{!=} both mean ``not equal'';
-          \texttt{<>} is the SQL standard, \texttt{!=} is widely supported
-          as an alias.
-    \item \texttt{BETWEEN} is \textbf{inclusive} on both bounds:
-          \texttt{BETWEEN 2 AND 5} includes the values 2 and 5.
-    \item \texttt{IN} is more readable than chaining many \texttt{OR}
-          conditions and the query optimiser treats them equivalently.
-          \texttt{NOT IN} is the logical negation.
+    \item \texttt{BETWEEN} is \textbf{inclusive} on both bounds
+    \item \texttt{IN} is more readable than chaining many \texttt{OR} conditions
+    \item The query optimiser treats \texttt{IN} and multiple \texttt{OR}s equivalently
   \end{itemize}
 \end{frame}
 
@@ -91,28 +99,32 @@ WHERE city IN ('Hamburg', 'Berlin', 'Muenchen');
   \begin{block}{Wildcard Characters}
 \begin{lstlisting}[style=sqlstyle]
 -- % matches zero, one, or many characters
-SELECT * FROM employee WHERE name LIKE 'M%';     -- starts with M
-SELECT * FROM brand   WHERE name LIKE '%GmbH';   -- ends with GmbH
-SELECT * FROM product WHERE name LIKE '%milk%';  -- contains 'milk'
+-- Tracks starting with 'C'
+SELECT Title FROM Track WHERE Title LIKE 'C%';
+-- Result: Come Together
+
+-- Albums containing 'Road' anywhere
+SELECT Title FROM Album WHERE Title LIKE '%Road%';
+-- Result: Abbey Road
+
+-- Artists ending with 'k'
+SELECT Name FROM Artist WHERE Name LIKE '%k';
+-- Result: Daft Punk, Kraftwerk
 
 -- _ matches exactly one character
-SELECT * FROM brand WHERE name LIKE '_ike';  -- 4-letter names ending 'ike'
-SELECT * FROM brand WHERE name LIKE '%a_';  -- 2nd-to-last letter is 'a'
+-- 4-letter artist names (any 4 chars)
+SELECT Name FROM Artist WHERE Name LIKE '____';
 \end{lstlisting}
   \end{block}
 
   \begin{itemize}
-    \item \texttt{\%} is the most commonly used wildcard; \texttt{\_}
-          (underscore) is used when the exact position matters.
-    \item In MySQL with the default collation, \texttt{LIKE} is
-          \textbf{case-insensitive}.  This behaviour depends on the
-          table's collation setting.
+    \item In MySQL with the default collation, \texttt{LIKE} is \textbf{case-insensitive}
   \end{itemize}
 
   \begin{alertblock}{Performance: Avoid Leading Wildcards}
-    \texttt{LIKE '\%term'} (leading \texttt{\%}) \textbf{cannot use an
-    index} and forces a full table scan.  On large tables this can be
-    orders of magnitude slower than \texttt{LIKE 'term\%'}.
+    \texttt{LIKE '\%term'} \textbf{cannot use an index} -- forces a full table scan.
+    \texttt{LIKE 'term\%'} can use an index. For full-text search, use
+    \texttt{FULLTEXT} indexes instead.
   \end{alertblock}
 \end{frame}
 
@@ -120,31 +132,54 @@ SELECT * FROM brand WHERE name LIKE '%a_';  -- 2nd-to-last letter is 'a'
 \begin{frame}[fragile]{WHERE -- NULL Handling}
   \begin{block}{Testing for NULL}
 \begin{lstlisting}[style=sqlstyle]
--- Correct: use IS NULL / IS NOT NULL
-SELECT * FROM stock WHERE storage_id IS NOT NULL;
-SELECT * FROM stock WHERE best_before_date IS NULL;
+-- Artists with no country recorded
+SELECT Name FROM Artist WHERE Country IS NULL;
+
+-- Artists WITH a country recorded
+SELECT Name FROM Artist WHERE Country IS NOT NULL;
+
+-- NULL propagates in arithmetic
+SELECT 5 + NULL;    -- Result: NULL
+SELECT NULL > 0;    -- Result: NULL (not FALSE!)
 \end{lstlisting}
   \end{block}
 
-  \begin{alertblock}{= NULL Never Works}
-    \texttt{WHERE column = NULL} always evaluates to \texttt{NULL}
-    (unknown), \textbf{never} \texttt{TRUE}.  The row is therefore never
-    returned.  This is one of the most frequent beginner mistakes in SQL.
+  \begin{alertblock}{\texttt{= NULL} Never Works}
+    \texttt{WHERE Country = NULL} always evaluates to \texttt{NULL}
+    (unknown), \textbf{never} \texttt{TRUE}. No rows are ever returned.
+    This is one of the most frequent SQL beginner mistakes.
   \end{alertblock}
 
   \begin{block}{NULL Semantics}
     \begin{itemize}
       \item \texttt{NULL} means \emph{unknown} or \emph{not applicable} --
-            it is \textbf{not} the same as zero, the empty string, or
-            \texttt{false}.
-      \item \textbf{NULL propagates}: any arithmetic or comparison
-            involving \texttt{NULL} yields \texttt{NULL}.
-            E.g.\ \texttt{NULL + 5 = NULL},
-            \texttt{NULL > 0 = NULL}.
-      \item Design decision: use \texttt{NULL} for truly optional attributes
-            where no value is appropriate; use a \texttt{DEFAULT} value
-            (e.g.\ \texttt{0} or \texttt{''}) where a sensible default
-            exists.
+            it is \textbf{not} zero, empty string, or \texttt{false}
+      \item Any arithmetic or comparison with \texttt{NULL} yields \texttt{NULL}
+      \item SQL uses \textbf{three-valued logic}: TRUE, FALSE, UNKNOWN (NULL)
     \end{itemize}
   \end{block}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}[fragile]{WHERE -- Common Mistakes Summary}
+  \begin{alertblock}{Top 4 WHERE Mistakes}
+\begin{lstlisting}[style=sqlstyle]
+-- 1. NULL comparison (WRONG / CORRECT)
+WHERE Country = NULL          -- always 0 rows
+WHERE Country IS NULL         -- correct
+
+-- 2. Forgetting quotes around strings
+WHERE Country = Germany       -- ERROR: Germany is not a column
+WHERE Country = 'Germany'     -- correct
+
+-- 3. AND / OR precedence without parentheses
+WHERE Genre = 'Rock' OR Genre = 'Electronic' AND ReleaseYear > 2000
+-- Read as: Genre='Rock' OR (Genre='Electronic' AND year>2000)
+-- Add parentheses to clarify intent!
+
+-- 4. Case-sensitive string values (on some collations)
+WHERE Country = 'germany'     -- may return 0 rows
+WHERE Country = 'Germany'     -- correct
+\end{lstlisting}
+  \end{alertblock}
 \end{frame}

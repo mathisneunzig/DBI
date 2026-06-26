@@ -1,89 +1,193 @@
 % ----------------------------------------------------------
-\begin{frame}{Laws: Commutative and Associative}
-  Query optimisers exploit algebraic laws to reorder operations without
-  changing the result, thereby choosing the most efficient execution plan.
-  The following laws hold for relational algebra:
+\begin{frame}{Algebraic Laws --- Why They Matter}
+  A \textbf{query optimiser} inside a DBMS never executes the query as written.
+  Instead it \textbf{rewrites} the expression using algebraic equivalences to
+  find a cheaper execution plan.
 
-  \begin{block}{Commutativity}
-    \begin{itemize}
-      \item Union: $A \cup B = B \cup A$
-      \item Intersection: $A \cap B = B \cap A$
-      \item Cartesian Product: $A \times B = B \times A$
-      \item Join: $A \bowtie B = B \bowtie A$
-    \end{itemize}
+  \begin{block}{Core Principle}
+    Two expressions are \textbf{equivalent} if they produce the same result
+    for every valid database instance.  The DBMS may freely substitute one for
+    the other.
   \end{block}
 
-  \begin{block}{Associativity}
-    \begin{itemize}
-      \item Union: $(A \cup B) \cup C = A \cup (B \cup C)$
-      \item Intersection: $(A \cap B) \cap C = A \cap (B \cap C)$
-      \item Cartesian Product: $(A \times B) \times C = A \times (B \times C)$
-      \item Join: $(A \bowtie B) \bowtie C = A \bowtie (B \bowtie C)$
-    \end{itemize}
-  \end{block}
-
-  These laws allow a DBMS to, for example, join the \emph{smallest} two
-  tables first, drastically reducing the size of intermediate results.
+  \begin{examples}{Motivating Example}
+    Consider
+    $\rasel_{\texttt{Country}=\texttt{'DE'}}(\texttt{Customers} \times \texttt{Orders})$\\[4pt]
+    The Cartesian product alone could produce \emph{millions} of rows.  The
+    optimiser rewrites this by \textbf{pushing} the restriction
+    \emph{inside} the product:
+    \[
+      \rasel_{\texttt{Country}=\texttt{'DE'}}(\texttt{Customers}) \times \texttt{Orders}
+    \]
+    Now only German customers participate in the product --- a dramatic
+    reduction in intermediate-result size.
+  \end{examples}
 \end{frame}
 
 % ----------------------------------------------------------
-\begin{frame}{Laws: Restriction Rules (!)}
+\begin{frame}{Laws: Commutativity}
+  An operator is \textbf{commutative} if swapping the operands yields the
+  same result.
+
+  \begin{block}{Commutative Operators}
+    \begin{itemize}
+      \item \textbf{Union:}             $A \cup B = B \cup A$
+      \item \textbf{Intersection:}      $A \cap B = B \cap A$
+      \item \textbf{Cartesian Product:} $A \times B = B \times A$
+      \item \textbf{Join:}              $A \rajoin B = B \rajoin A$
+    \end{itemize}
+  \end{block}
+
+  \begin{alertblock}{Set Difference is NOT commutative}
+    $A \setminus B \neq B \setminus A$ in general.
+  \end{alertblock}
+
+  \begin{block}{Practical Use}
+    The DBMS may reorder join operands so that the \emph{smaller} table is
+    processed first, reducing memory usage for hash joins.
+  \end{block}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Laws: Associativity}
+  An operator is \textbf{associative} if the grouping of operands does not
+  matter.
+
+  \begin{block}{Associative Operators}
+    \begin{itemize}
+      \item \textbf{Union:}
+            $(A \cup B) \cup C = A \cup (B \cup C)$
+      \item \textbf{Intersection:}
+            $(A \cap B) \cap C = A \cap (B \cap C)$
+      \item \textbf{Cartesian Product:}
+            $(A \times B) \times C = A \times (B \times C)$
+      \item \textbf{Join:}
+            $(A \rajoin B) \rajoin C = A \rajoin (B \rajoin C)$
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Practical Use --- Join Ordering}
+    With commutativity and associativity together, a DBMS can try
+    \textbf{all possible join orderings} for a multi-table query and pick
+    the cheapest.  For $n$ tables there are $\frac{(2(n-1))!}{(n-1)!}$
+    possible orderings --- a key part of cost-based optimisation.
+  \end{block}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Laws: Restriction Rules \textbf{(!)}}
   \begin{alertblock}{Note: Not Required for Exam}
     The following equivalences are important for understanding query
     optimisation but will not be examined.
   \end{alertblock}
 
-  Restrictions are cheap to apply and can often be \emph{pushed down}
-  closer to the base relations, reducing the number of tuples processed by
-  subsequent (more expensive) operations.
+  Restrictions are \textbf{cheap} (they reduce tuple counts) and should be
+  applied \emph{as early as possible} --- this is called \textbf{predicate
+  push-down}.
 
   \begin{block}{Key Equivalences}
     \begin{itemize}
-      \item Chaining and merging:
-            $\sigma_{C_1}(\sigma_{C_2}(R)) = \sigma_{C_2}(\sigma_{C_1}(R))
-             = \sigma_{C_1 \wedge C_2}(R)$
-      \item Distributing over union:
-            $\sigma_C(R_1 \cup R_2) = \sigma_C(R_1) \cup \sigma_C(R_2)$
-      \item Distributing over join:
-            $\sigma_C(R_1 \bowtie R_2) = \sigma_C(R_1) \bowtie \sigma_C(R_2)$
-            \quad (push restrictions \emph{into} the join operands)
-      \item Commuting with projection:
-            $\sigma_C(\pi_A(R)) = \pi_A(\sigma_C(R))$
-            \quad (apply restriction before projection)
-      \item Distributing disjunction:
-            $\sigma_{C_1}(R) \vee \sigma_{C_2}(R) = \sigma_{C_1}(R) \cup \sigma_{C_2}(R)$
+      \item \textbf{Merge:}
+            $\rasel_{C_1}(\rasel_{C_2}(R)) = \rasel_{C_1 \wedge C_2}(R)$
+      \item \textbf{Commutativity:}
+            $\rasel_{C_1}(\rasel_{C_2}(R)) = \rasel_{C_2}(\rasel_{C_1}(R))$
+      \item \textbf{Distribute over union:}
+            $\rasel_C(R_1 \cup R_2) = \rasel_C(R_1) \cup \rasel_C(R_2)$
+      \item \textbf{Distribute over join (push-down):}
+            $\rasel_C(R_1 \rajoin R_2) = \rasel_C(R_1) \rajoin \rasel_C(R_2)$
+      \item \textbf{Commute with projection:}
+            $\rasel_C(\raproj_A(R)) = \raproj_A(\rasel_C(R))$
+            \quad (restrict \emph{before} projecting)
     \end{itemize}
   \end{block}
 \end{frame}
 
 % ----------------------------------------------------------
-\begin{frame}{Additional Laws (!)}
+\begin{frame}{Laws: Predicate Push-Down --- Worked Example \textbf{(!)}}
   \begin{alertblock}{Note: Not Required for Exam}
-    These rules deepen understanding of the algebra but are not
-    examinable.
   \end{alertblock}
 
-  \begin{block}{Pushing Conditions to Where They Belong}
-    If a restriction condition $C$ only references attributes of $R_2$, it
-    can be moved inside the join:
+  \begin{block}{Scenario}
+    \textbf{Goal:} Find the names of German customers and their order totals.
+
+    \textbf{Naive plan:}
     \[
-      \sigma_{C_{\text{on } R_2}}(R_1 \bowtie R_2)
-        \;=\; R_1 \bowtie \sigma_{C_{\text{on } R_2}}(R_2)
+      \raproj_{\texttt{Name, Total}}\!\left(
+        \rasel_{\texttt{Country}=\texttt{'DE'}}(\texttt{Customers} \rajoin \texttt{Orders})
+      \right)
     \]
-    Applying the filter to $R_2$ \emph{before} the join reduces the
-    number of tuples that need to be combined.
+    The join produces a huge intermediate result before filtering.
+  \end{block}
+
+  \begin{block}{Optimised plan (push restriction inside join)}
+    \[
+      \raproj_{\texttt{Name, Total}}\!\left(
+        \rasel_{\texttt{Country}=\texttt{'DE'}}(\texttt{Customers})
+        \;\rajoin\;
+        \texttt{Orders}
+      \right)
+    \]
+    Filter \texttt{Customers} first $\Rightarrow$ only German customers
+    participate in the join $\Rightarrow$ much smaller intermediate result.
+  \end{block}
+
+  Both expressions are \textbf{equivalent} --- the result is identical.
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Laws: Division and Further Rules \textbf{(!)}}
+  \begin{alertblock}{Note: Not Required for Exam}
+    These rules deepen understanding of the algebra but are not examinable.
+  \end{alertblock}
+
+  \begin{block}{Push a Condition Into a Join Operand}
+    If $C$ references only attributes of $R_2$:
+    \[
+      \rasel_{C}(R_1 \rajoin R_2) \;=\; R_1 \rajoin \rasel_{C}(R_2)
+    \]
+    Filtering $R_2$ \emph{before} the join reduces the number of tuples
+    that participate.
   \end{block}
 
   \begin{block}{Division as the Inverse of Cartesian Product}
     \[
       R_1 = (R_1 \times R_2) \div R_2
     \]
-    Just as multiplication and division are inverse arithmetic operations,
-    division undoes a Cartesian product.  This identity confirms the
-    intuitive meaning of division.
+    Just as $x = (x \cdot y) / y$ in arithmetic, division undoes a Cartesian
+    product.  This identity confirms the intuitive meaning of the division
+    operator.
   \end{block}
 
-  These rules collectively form the foundation on which real-world DBMS
-  query optimisers build their rewriting and cost-based optimisation
-  strategies.
+  \begin{block}{Projection Cascade}
+    $\raproj_{A}(\raproj_{AB}(R)) = \raproj_{A}(R)$
+    \quad (the outer projection subsumes the inner one)
+  \end{block}
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Laws: Summary for the Query Optimiser \textbf{(!)}}
+  \begin{alertblock}{Note: Not Required for Exam}
+  \end{alertblock}
+
+  \begin{center}
+    \small
+    \begin{tabular}{lp{6.5cm}}
+      \toprule
+      \textbf{Law} & \textbf{Optimiser action} \\
+      \midrule
+      Commutativity of join    & Reorder tables so smaller table is on the left \\
+      Associativity of join    & Reorder multi-table joins to minimise intermediate sizes \\
+      Predicate push-down      & Move $\rasel$ as close to base tables as possible \\
+      Projection push-down     & Move $\raproj$ inward to reduce column count early \\
+      Merge restrictions       & Combine multiple $\rasel$ into one filter pass \\
+      \bottomrule
+    \end{tabular}
+  \end{center}
+
+  \vspace{0.6em}
+  \begin{block}{The Big Picture}
+    These equivalences are \textbf{not about correctness} --- the results are
+    always the same.  They are about \textbf{efficiency}: reducing the number
+    of rows and columns that must be materialised during query execution.
+  \end{block}
 \end{frame}
